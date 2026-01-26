@@ -1,0 +1,30 @@
+{
+  "usdtBalance": 209.11288761,
+  "holdings": [
+    {
+      "id": "chaingpt",
+      "amount": 1000,
+      "avgBuyPrice": 0.0312621
+    },
+    {
+      "id": "bittensor",
+      "amount": 0.12158,
+      "avgBuyPrice": 238.3
+    },
+    {
+      "id": "near",
+      "amount": 19.7,
+      "avgBuyPrice": 1.521
+    },
+    {
+      "id": "render",
+      "amount": 14.66,
+      "avgBuyPrice": 2.046
+    },
+    {
+      "id": "render-token",
+      "amount": 14.66,
+      "avgBuyPrice": 2.046
+    }
+  ]
+}
