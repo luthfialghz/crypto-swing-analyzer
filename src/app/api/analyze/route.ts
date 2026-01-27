@@ -318,7 +318,46 @@ Aturan:
       jsonText = text.split('```')[1].split('```')[0].trim();
     }
 
-    const analysisResult = JSON.parse(jsonText);
+    // Clean up the JSON string to handle common issues
+    jsonText = jsonText
+      .replace(/^\s*```json\s*/, '')  // Remove leading ```json
+      .replace(/\s*```\s*$/, '')      // Remove trailing ```
+      .trim();
+
+    // Attempt to fix common JSON issues
+    let parsedJson;
+    try {
+      // Try parsing as-is first
+      parsedJson = JSON.parse(jsonText);
+      // Validate the structure
+      if (!parsedJson.analysis || !Array.isArray(parsedJson.analysis)) {
+        throw new Error('Invalid analysis result structure');
+      }
+      if (!parsedJson.marketSentiment || !parsedJson.overallAdvice) {
+        throw new Error('Missing required fields in analysis result');
+      }
+    } catch (parseError) {
+      // If direct parsing fails, try to extract JSON using regex
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[0];
+      } else {
+        throw new Error(`Could not extract valid JSON from response: ${jsonText.substring(0, 200)}...`);
+      }
+
+      // Try parsing again
+      parsedJson = JSON.parse(jsonText);
+
+      // Validate the structure again
+      if (!parsedJson.analysis || !Array.isArray(parsedJson.analysis)) {
+        throw new Error('Invalid analysis result structure after extraction');
+      }
+      if (!parsedJson.marketSentiment || !parsedJson.overallAdvice) {
+        throw new Error('Missing required fields in analysis result after extraction');
+      }
+    }
+
+    const analysisResult = parsedJson;
 
     // Simpan hasil ke cache
     analysisCache.set(cacheKey, {
