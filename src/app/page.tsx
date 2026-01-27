@@ -46,20 +46,27 @@ export default function Home() {
           </h1>
           <p className="text-slate-400 flex items-center gap-2">
             <Activity size={16} className="text-sky-400" />
-            Realtime Market Data Visualization (H4 & D1)
+            Visualisasi Data Pasar Realtime (H4 & D1)
           </p>
+          <a
+            href="/settings"
+            className="mt-2 inline-flex items-center text-sm text-slate-400 hover:text-slate-300 transition-colors"
+          >
+            Konfigurasi Koin Target
+            <Share2 size={14} className="ml-1" />
+          </a>
         </div>
 
         <div className="flex flex-col items-end gap-3">
           {getStatusBadge()}
-          
+
           {/* Refresh Button */}
           <button
             onClick={refresh}
             disabled={isRefreshing}
             className={`inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-semibold transition-all border shadow-lg ${
-              isRefreshing 
-                ? 'bg-sky-500/10 text-sky-400 border-sky-500/20 cursor-not-allowed' 
+              isRefreshing
+                ? 'bg-sky-500/10 text-sky-400 border-sky-500/20 cursor-not-allowed'
                 : 'bg-sky-500/20 text-sky-400 border-sky-500/30 hover:bg-sky-500/30 hover:border-sky-500/50'
             }`}
           >

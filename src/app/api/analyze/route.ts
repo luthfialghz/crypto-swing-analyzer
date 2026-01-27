@@ -6,11 +6,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const analysisCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 menit cache
 
+// Maximum cache size to prevent memory issues
+const MAX_CACHE_SIZE = 100;
+
 // Sistem pelacakan kuota harian dan per menit
 let dailyQuotaUsed = 0;
 let minuteQuotaUsed = 0;
-const DAILY_QUOTA_LIMIT = 100; // Batas RPD untuk Gemini 2.5 Pro Free Tier
-const MINUTE_QUOTA_LIMIT = 1; // Batas per menit untuk Free Tier (dikurangi agar tetap dalam batas)
+const DAILY_QUOTA_LIMIT = 1000; // Batas RPD untuk Gemini 2.5 Flash Free Tier
+const MINUTE_QUOTA_LIMIT = 15; // Batas per menit untuk Free Tier (dikurangi agar tetap dalam batas)
 const QUOTA_RESET_TIME = 24 * 60 * 60 * 1000; // 24 jam dalam milidetik
 const MINUTE_RESET_TIME = 60 * 1000; // 1 menit dalam milidetik
 let lastQuotaReset = Date.now();
@@ -59,6 +62,41 @@ function consumeQuota(): void {
   console.log(`Quota used: ${dailyQuotaUsed}/${DAILY_QUOTA_LIMIT} (daily), ${minuteQuotaUsed}/${MINUTE_QUOTA_LIMIT} (minute)`);
 }
 
+// Fungsi untuk membersihkan cache yang kadaluarsa
+function cleanupExpiredCache(): void {
+  const now = Date.now();
+  for (const [key, value] of analysisCache.entries()) {
+    if (now - value.timestamp >= CACHE_DURATION_MS) {
+      analysisCache.delete(key);
+    }
+  }
+
+  // Also limit cache size to prevent memory issues
+  if (analysisCache.size > MAX_CACHE_SIZE) {
+    // Remove oldest entries
+    const entries = Array.from(analysisCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+    while (analysisCache.size > MAX_CACHE_SIZE) {
+      const [oldestKey] = entries.shift()!;
+      analysisCache.delete(oldestKey);
+    }
+  }
+}
+
+// Fungsi untuk membuat cache key yang lebih efisien
+function generateCacheKey(coins: CoinAnalysisRequest[], portfolioContext: string): string {
+  // Create a hash-like key based on coin IDs and prices
+  const coinSignature = coins.map(c =>
+    `${c.id}-${Math.round(c.current_price * 100)}-${Math.round(c.h4_change * 100)}-${Math.round(c.price_change_percentage_24h * 100)}`
+  ).join('|');
+
+  const contextSignature = portfolioContext ?
+    `ctx-${portfolioContext.substring(0, 50).replace(/\W+/g, '')}` : 'no-ctx';
+
+  return `${coinSignature}|${contextSignature}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Reset kuota jika waktunya sudah habis
@@ -93,19 +131,33 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const coins: CoinAnalysisRequest[] = body.coins;
-    const portfolioContext: string = body.portfolioContext || '';
+
+    // Get portfolio context from the portfolio API if not provided in the request
+    let portfolioContext: string = body.portfolioContext || '';
+    if (!portfolioContext) {
+      try {
+        const portfolioRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/portfolio`, {
+          method: 'PUT'
+        });
+        if (portfolioRes.ok) {
+          const portfolioData = await portfolioRes.json();
+          portfolioContext = portfolioData.context;
+        }
+      } catch (err) {
+        console.warn('Could not fetch portfolio context:', err);
+        // Continue without portfolio context
+      }
+    }
 
     if (!coins || coins.length === 0) {
       return NextResponse.json({ error: 'No coins data provided' }, { status: 400 });
     }
 
+    // Bersihkan cache yang kadaluarsa sebelum memproses permintaan baru
+    cleanupExpiredCache();
+
     // Buat cache key berdasarkan data coins dan context
-    const cacheKey = `analysis_${JSON.stringify(coins.map(c => ({
-      id: c.id,
-      price: c.current_price,
-      h4: c.h4_change,
-      d1: c.price_change_percentage_24h
-    })))}_${portfolioContext || 'no-context'}`;
+    const cacheKey = generateCacheKey(coins, portfolioContext);
 
     // Cek apakah hasil sudah ada di cache
     const cachedResult = analysisCache.get(cacheKey);
@@ -136,55 +188,125 @@ export async function POST(request: NextRequest) {
       return `${coin.symbol}: $${coin.current_price.toFixed(2)} | H4: ${coin.h4_change.toFixed(2)}% | D1: ${coin.price_change_percentage_24h.toFixed(2)}% | 7D Vol: ${volatility}% | Trend: ${shortTermTrend}`;
     }).join('\n');
 
-    const prompt = `
-Expert crypto swing trader. Analyze and give BUY/SELL/HOLD with targets.
+    // Fetch target coins configuration to provide context for alternative investment suggestions
+    let availableCoins = [];
+    try {
+      const targetCoinsRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/target-coins`);
+      if (targetCoinsRes.ok) {
+        const targetCoins = await targetCoinsRes.json();
+        availableCoins = targetCoins.filter((coin: any) => coin.enabled);
+      }
+    } catch (err) {
+      console.warn('Could not fetch target coins configuration for alternative suggestions:', err);
+      // Fallback to default coins if API fails
+      availableCoins = [
+        { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
+        { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
+        { id: 'solana', name: 'Solana', symbol: 'SOL' },
+        { id: 'cardano', name: 'Cardano', symbol: 'ADA' },
+        { id: 'polkadot', name: 'Polkadot', symbol: 'DOT' }
+      ];
+    }
 
-MARKET DATA:
+    const alternativeCoinsList = availableCoins
+      .filter((coin: any) => !coins.some(c => c.id === coin.id))
+      .map((coin: any) => `${coin.symbol} (${coin.name})`)
+      .slice(0, 10) // Limit to 10 alternatives to save tokens
+      .join(', ');
+
+    const prompt = `
+Seorang ahli trading swing crypto. ANALISIS UNTUK SWING TRADING (BUKAN SCALPING) dengan timeframe 4H-7D.
+
+DATA PASAR:
 ${marketDataSummary}
 
-${portfolioContext ? `PORTFOLIO: ${portfolioContext.substring(0, 200)}` : ''} // Limit portfolio context length
+${portfolioContext ? `KONTEKS PORTOFOLIO: ${portfolioContext.substring(0, 300)}` : ''} // Sertakan konteks portofolio untuk ukuran posisi
 
-Provide JSON:
+KOIN YANG TERSEDIA UNTUK INVESTASI ALTERNATIF: ${alternativeCoinsList || 'bitcoin, ethereum, solana, cardano, polkadot'} // Sarankan ini saat merekomendasikan penjualan
+
+Berikan JSON:
 {
   "analysis": [
     {
       "coinId": "id",
-      "coinName": "Name",
-      "symbol": "SYM",
-      "recommendation": "BUY/SELL/HOLD",
+      "coinName": "Nama",
+      "symbol": "SIM",
+      "recommendation": "BELI/JUAL/TAHAN",
       "confidence": 0-100,
+      "positionSizePercent": 0-100, // Persentase dari saldo USDT untuk dialokasikan
       "entryPrice": number,
       "targetPrice": number,
       "stopLoss": number,
-      "timeframe": "duration",
-      "reasoning": "brief reason",
-      "riskLevel": "LOW/MED/HIGH",
-      "keyLevels": {"support": [prices], "resistance": [prices]}
+      "timeframe": "durasi swing (misalnya, 2-7 hari)",
+      "reasoning": "Rasio trading SWING dengan analisis tren",
+      "riskLevel": "RENDAH/SEDANG/TINGGI",
+      "keyLevels": {"support": [harga], "resistance": [harga]},
+      "swingPlan": {
+        "strategy": "strategi swing spesifik",
+        "entry": "kapan dan bagaimana masuk",
+        "exit": "kapan dan bagaimana keluar",
+        "riskManagement": "kontrol risiko untuk trading swing"
+      }
     }
   ],
-  "marketSentiment": "BULL/BEAR/NEUTRAL",
-  "overallAdvice": "concise advice"
+  "marketSentiment": "BULLISH/BEARISH/NETRAL",
+  "overallAdvice": "saran trading swing komprehensif dengan mempertimbangkan alokasi portofolio"
 }
 
-Rules:
-- Use provided data only
-- Realistic price targets based on current prices
-- Include risk management
-- Return ONLY JSON, no other text
+Aturan:
+- FOKUS PADA SWING TRADING (tahan posisi selama beberapa jam hingga hari, BUKAN menit)
+- Sertakan ukuran posisi berdasarkan konteks portofolio (jika disediakan)
+- Rekomendasikan KOIN ALTERNATIF dari daftar KOIN YANG TERSEDIA saat merekomendasikan PENJUALAN kepemilikan saat ini
+- Pertimbangkan rebalancing portofolio: jika merekomendasikan untuk JUAL, sarankan apa yang harus dibeli dengan hasil penjualan dari daftar koin yang tersedia
+- Target harga realistis berdasarkan level teknikal dan chart 4H/1D
+- Sertakan manajemen risiko dengan stop loss
+- Faktor diversifikasi portofolio
+- Kembalikan HANYA JSON VALID, tanpa teks lain
+- Jika konteks portofolio mencakup saldo USDT, rekomendasikan persentase alokasi spesifik
+- Untuk situasi CUT LOSS, rekomendasikan investasi alternatif dari daftar koin yang tersedia
+- Untuk rekomendasi BELI, pertimbangkan koin mana yang mungkin dikurangi posisinya untuk membiayai pembelian
 `;
 
-    // Use gemini-2.5-pro for enhanced analysis capabilities
-    // Note: If you're experiencing issues with model availability,
-    // you may need to check your API key permissions or region availability
+    // Use gemini-2.5-flash for better free tier availability
+    // Gemini 2.5 Pro has had its free tier significantly restricted
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 8192, // Increased token limit for more detailed analysis
       }
     });
 
-    const result = await model.generateContent(prompt);
+    // Try to generate content with the model
+    let result;
+    try {
+      result = await model.generateContent(prompt);
+    } catch (apiError: any) {
+      // Handle specific API errors
+      if (apiError.status === 429 || apiError.message?.includes('quota') || apiError.message?.includes('429')) {
+        console.error('API quota exceeded for this request');
+
+        // Return a more informative error with retry suggestion
+        return NextResponse.json(
+          {
+            error: 'API quota exceeded. Please try again later.',
+            quotaInfo: {
+              used: dailyQuotaUsed,
+              limit: DAILY_QUOTA_LIMIT,
+              minuteUsed: minuteQuotaUsed,
+              minuteLimit: MINUTE_QUOTA_LIMIT,
+              resetAfter: Math.ceil((MINUTE_RESET_TIME - (Date.now() - lastMinuteReset)) / 1000),
+              retryAfter: Math.ceil((MINUTE_RESET_TIME - (Date.now() - lastMinuteReset)) / 1000) + 5 // Add buffer
+            }
+          },
+          { status: 429 }
+        );
+      }
+
+      // Re-throw other errors to be handled by the outer catch
+      throw apiError;
+    }
+
     const response = await result.response;
     const text = response.text();
 
@@ -220,6 +342,7 @@ Rules:
     // Better error messages
     let errorMessage = 'Failed to generate analysis';
     let errorDetails = String(error);
+    let statusCode = 500;
 
     if (error instanceof Error) {
       errorDetails = error.message;
@@ -228,6 +351,7 @@ Rules:
         errorMessage = 'Invalid Gemini API Key. Please check your .env.local file.';
       } else if (error.message.includes('QUOTA_EXCEEDED') || error.message.includes('429')) {
         errorMessage = 'API quota exceeded. Please try again later.';
+        statusCode = 429;
         // Kembalikan kuota jika API mengembalikan error kuota
         if (dailyQuotaUsed > 0) {
           dailyQuotaUsed--;
@@ -236,13 +360,24 @@ Rules:
           minuteQuotaUsed--;
         }
       } else if (error.message.includes('model')) {
-        errorMessage = 'Model not available. Trying fallback...';
+        errorMessage = 'Model not available. Please check if your API key has access to the requested model.';
+      } else if (error.message.includes('500') || error.message.includes('Internal')) {
+        errorMessage = 'Internal server error from AI service. Please try again later.';
       }
     }
 
     return NextResponse.json(
-      { error: errorMessage, details: errorDetails },
-      { status: 500 }
+      {
+        error: errorMessage,
+        details: errorDetails,
+        quotaInfo: {
+          used: dailyQuotaUsed,
+          limit: DAILY_QUOTA_LIMIT,
+          minuteUsed: minuteQuotaUsed,
+          minuteLimit: MINUTE_QUOTA_LIMIT
+        }
+      },
+      { status: statusCode }
     );
   }
 }

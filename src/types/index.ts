@@ -23,6 +23,11 @@ export interface SwingPlan {
   entry: string;
   exit: string;
   riskManagement: string;
+  // Indonesian equivalents
+  strategi?: string;
+  masuk?: string;
+  keluar?: string;
+  manajemenRisiko?: string;
 }
 
 export interface KeyLevels {
@@ -34,18 +39,19 @@ export interface CoinAnalysis {
   coinId: string;
   coinName: string;
   symbol: string;
-  recommendation: 'BUY' | 'SELL' | 'HOLD';
+  recommendation: 'BELI' | 'JUAL' | 'TAHAN';
   confidence: number;
-  buyPercentage: number;
-  sellPercentage: number;
-  entryPrice: number;
-  targetPrice: number;
-  stopLoss: number;
+  positionSizePercent?: number;
+  buyPercentage?: number;
+  sellPercentage?: number;
+  entryPrice?: number;
+  targetPrice?: number;
+  stopLoss?: number;
   timeframe: string;
   reasoning: string;
-  swingPlan: SwingPlan;
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-  keyLevels: KeyLevels;
+  swingPlan?: SwingPlan;
+  riskLevel: 'RENDAH' | 'SEDANG' | 'TINGGI';
+  keyLevels?: KeyLevels;
 }
 
 export interface AIAnalysisResult {

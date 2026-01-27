@@ -41,21 +41,21 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const currentData = await getPortfolio();
-    
+
     // Update data (Merge logic sederhana)
     // Body bisa berisi { usdtBalance: ... } atau { holding: ... }
-    
+
     let newData = { ...currentData };
 
     if (body.action === 'update_balance') {
         newData.usdtBalance = body.usdtBalance;
-    } 
+    }
     else if (body.action === 'add_holding') {
         const { id, amount, avgBuyPrice } = body.holding;
         // Cek jika coin sudah ada, update average (simplified: replace or add logic)
         // Disini kita akan simple add/replace
         const existingIndex = newData.holdings.findIndex((h: Holding) => h.id === id);
-        
+
         if (existingIndex >= 0) {
             // Update existing
             newData.holdings[existingIndex] = { id, amount, avgBuyPrice };
@@ -72,5 +72,33 @@ export async function POST(request: Request) {
     return NextResponse.json(newData);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
+  }
+}
+
+// New endpoint to get portfolio context for AI analysis
+export async function PUT(request: Request) {
+  try {
+    const currentData = await getPortfolio();
+
+    // Create a comprehensive portfolio context for the AI
+    const portfolioContext = {
+      usdtBalance: currentData.usdtBalance,
+      totalHoldings: currentData.holdings.length,
+      totalValueUSD: 0, // Will be calculated after fetching current prices
+      holdings: currentData.holdings,
+      cashPercentage: 0, // Will be calculated after total value is known
+      diversification: currentData.holdings.length > 0 ?
+        Math.min(100, Math.floor(100 / currentData.holdings.length)) : 100
+    };
+
+    // Create a human-readable string for the AI
+    const contextString = `Portfolio: USDT Balance: $${currentData.usdtBalance.toFixed(2)}, Holdings Count: ${currentData.holdings.length}, Target Diversification: ${portfolioContext.diversification}% per coin. Available funds: $${currentData.usdtBalance.toFixed(2)}.`;
+
+    return NextResponse.json({
+      context: contextString,
+      details: portfolioContext
+    });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to generate portfolio context' }, { status: 500 });
   }
 }

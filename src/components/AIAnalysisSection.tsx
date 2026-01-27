@@ -58,8 +58,10 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
 
   const getRecommendationStyle = (rec: string) => {
     switch (rec) {
+      case 'BELI':
       case 'BUY':
         return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+      case 'JUAL':
       case 'SELL':
         return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
       default:
@@ -69,8 +71,10 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
 
   const getRecommendationIcon = (rec: string) => {
     switch (rec) {
+      case 'BELI':
       case 'BUY':
         return <TrendingUp size={18} />;
+      case 'JUAL':
       case 'SELL':
         return <TrendingDown size={18} />;
       default:
@@ -80,10 +84,13 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
 
   const getRiskStyle = (risk: string) => {
     switch (risk) {
+      case 'RENDAH':
       case 'LOW':
         return 'text-emerald-400';
+      case 'SEDANG':
       case 'MEDIUM':
         return 'text-amber-400';
+      case 'TINGGI':
       case 'HIGH':
         return 'text-rose-400';
       default:
@@ -97,6 +104,13 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
         return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'BEARISH':
         return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      case 'BULL':
+        return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'BEAR':
+        return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      case 'NETRAL':
+      case 'NEUTRAL':
+        return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
       default:
         return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
     }
@@ -188,11 +202,13 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
           <div className={`p-4 rounded-xl border ${getSentimentStyle(analysis.marketSentiment)}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">Market Sentiment:</span>
+                <span className="text-sm font-medium">Sentimen Pasar:</span>
                 <span className="font-bold">{analysis.marketSentiment}</span>
               </div>
             </div>
-            <p className="text-sm mt-2 opacity-80">{analysis.overallAdvice}</p>
+            <div className="mt-2 text-sm opacity-90 prose prose-invert max-w-none">
+              <div dangerouslySetInnerHTML={{ __html: analysis.overallAdvice.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />') }} />
+            </div>
           </div>
 
           {/* Analysis Cards */}
@@ -223,6 +239,12 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                         <div className="text-xs text-slate-400">Confidence</div>
                         <div className="font-bold text-white">{coin.confidence}%</div>
                       </div>
+                      {coin.positionSizePercent !== undefined && (
+                        <div className="text-right">
+                          <div className="text-xs text-slate-400">Position</div>
+                          <div className="font-bold text-white">{coin.positionSizePercent}%</div>
+                        </div>
+                      )}
                       {expandedCard === coin.coinId ? (
                         <ChevronUp size={20} className="text-slate-400" />
                       ) : (
@@ -235,15 +257,15 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                   <div className="grid grid-cols-3 gap-3 mt-4">
                     <div className="bg-slate-900/50 rounded-lg p-2 text-center">
                       <div className="text-xs text-slate-400 mb-1">Entry</div>
-                      <div className="font-mono text-sm text-white">${coin.entryPrice.toLocaleString()}</div>
+                      <div className="font-mono text-sm text-white">${coin.entryPrice ? coin.entryPrice.toLocaleString() : 'N/A'}</div>
                     </div>
                     <div className="bg-slate-900/50 rounded-lg p-2 text-center">
                       <div className="text-xs text-slate-400 mb-1">Target</div>
-                      <div className="font-mono text-sm text-emerald-400">${coin.targetPrice.toLocaleString()}</div>
+                      <div className="font-mono text-sm text-emerald-400">${coin.targetPrice ? coin.targetPrice.toLocaleString() : 'N/A'}</div>
                     </div>
                     <div className="bg-slate-900/50 rounded-lg p-2 text-center">
                       <div className="text-xs text-slate-400 mb-1">Stop Loss</div>
-                      <div className="font-mono text-sm text-rose-400">${coin.stopLoss.toLocaleString()}</div>
+                      <div className="font-mono text-sm text-rose-400">${coin.stopLoss ? coin.stopLoss.toLocaleString() : 'N/A'}</div>
                     </div>
                   </div>
                 </div>
@@ -269,7 +291,7 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                     <div>
                       <h5 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
                         <Brain size={14} className="text-violet-400" />
-                        Analysis Reasoning
+                        Alasan Analisis
                       </h5>
                       <p className="text-sm text-slate-300 leading-relaxed">{coin.reasoning}</p>
                     </div>
@@ -277,37 +299,37 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                     {/* Swing Plan */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="bg-slate-800/50 rounded-xl p-4">
-                        <h6 className="text-xs font-semibold text-emerald-400 mb-2">📈 Entry Strategy</h6>
-                        <p className="text-sm text-slate-300">{coin.swingPlan.entry}</p>
+                        <h6 className="text-xs font-semibold text-emerald-400 mb-2">📈 Strategi Entry</h6>
+                        <p className="text-sm text-slate-300">{coin.swingPlan?.entry || coin.swingPlan?.masuk || 'Tidak ditentukan'}</p>
                       </div>
                       <div className="bg-slate-800/50 rounded-xl p-4">
-                        <h6 className="text-xs font-semibold text-sky-400 mb-2">🎯 Exit Strategy</h6>
-                        <p className="text-sm text-slate-300">{coin.swingPlan.exit}</p>
+                        <h6 className="text-xs font-semibold text-sky-400 mb-2">🎯 Strategi Exit</h6>
+                        <p className="text-sm text-slate-300">{coin.swingPlan?.exit || coin.swingPlan?.keluar || 'Tidak ditentukan'}</p>
                       </div>
                       <div className="md:col-span-2 bg-slate-800/50 rounded-xl p-4">
-                        <h6 className="text-xs font-semibold text-amber-400 mb-2">🛡️ Risk Management</h6>
-                        <p className="text-sm text-slate-300">{coin.swingPlan.riskManagement}</p>
+                        <h6 className="text-xs font-semibold text-amber-400 mb-2">🛡️ Manajemen Risiko</h6>
+                        <p className="text-sm text-slate-300">{coin.swingPlan?.riskManagement || coin.swingPlan?.manajemenRisiko || 'Tidak ditentukan'}</p>
                       </div>
                     </div>
 
                     {/* Key Levels */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <h6 className="text-xs font-semibold text-emerald-400 mb-2">Support Levels</h6>
+                        <h6 className="text-xs font-semibold text-emerald-400 mb-2">Level Support</h6>
                         <div className="flex flex-wrap gap-2">
-                          {coin.keyLevels.support.map((level, i) => (
+                          {coin.keyLevels.support && coin.keyLevels.support.map((level, i) => (
                             <span key={i} className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-mono">
-                              ${level.toLocaleString()}
+                              ${level ? level.toLocaleString() : 'N/A'}
                             </span>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <h6 className="text-xs font-semibold text-rose-400 mb-2">Resistance Levels</h6>
+                        <h6 className="text-xs font-semibold text-rose-400 mb-2">Level Resistance</h6>
                         <div className="flex flex-wrap gap-2">
-                          {coin.keyLevels.resistance.map((level, i) => (
+                          {coin.keyLevels.resistance && coin.keyLevels.resistance.map((level, i) => (
                             <span key={i} className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 text-xs font-mono">
-                              ${level.toLocaleString()}
+                              ${level ? level.toLocaleString() : 'N/A'}
                             </span>
                           ))}
                         </div>
@@ -317,18 +339,18 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                     {/* Buy/Sell Percentage */}
                     {(coin.buyPercentage > 0 || coin.sellPercentage > 0) && (
                       <div className="bg-slate-800/50 rounded-xl p-4">
-                        <h6 className="text-xs font-semibold text-white mb-3">Suggested Position Allocation</h6>
+                        <h6 className="text-xs font-semibold text-white mb-3">Alokasi Posisi Disarankan</h6>
                         <div className="flex gap-4">
                           {coin.buyPercentage > 0 && (
                             <div className="flex-1">
                               <div className="flex justify-between text-xs mb-1">
-                                <span className="text-emerald-400">Buy</span>
-                                <span className="text-emerald-400 font-bold">{coin.buyPercentage}%</span>
+                                <span className="text-emerald-400">Beli</span>
+                                <span className="text-emerald-400 font-bold">{coin.buyPercentage || 0}%</span>
                               </div>
                               <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all"
-                                  style={{ width: `${coin.buyPercentage}%` }}
+                                  style={{ width: `${coin.buyPercentage || 0}%` }}
                                 />
                               </div>
                             </div>
@@ -336,13 +358,13 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                           {coin.sellPercentage > 0 && (
                             <div className="flex-1">
                               <div className="flex justify-between text-xs mb-1">
-                                <span className="text-rose-400">Sell</span>
-                                <span className="text-rose-400 font-bold">{coin.sellPercentage}%</span>
+                                <span className="text-rose-400">Jual</span>
+                                <span className="text-rose-400 font-bold">{coin.sellPercentage || 0}%</span>
                               </div>
                               <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full transition-all"
-                                  style={{ width: `${coin.sellPercentage}%` }}
+                                  style={{ width: `${coin.sellPercentage || 0}%` }}
                                 />
                               </div>
                             </div>

@@ -2,14 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { CoinData, ProcessedCoinData } from '@/types';
-
-const TARGET_COINS = [
-  'chaingpt',
-  'bittensor',
-  'near',
-  'render-token',
-  'tether',
-];
+import { getTargetCoins } from '@/config/target-coins';
 
 export const useCryptoData = () => {
   const [data, setData] = useState<ProcessedCoinData[]>([]);
@@ -22,8 +15,22 @@ export const useCryptoData = () => {
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const ids = TARGET_COINS.join(',');
-      
+      // Fetch target coins from API
+      const targetCoinsRes = await fetch('/api/target-coins');
+      if (!targetCoinsRes.ok) throw new Error('Failed to load target coins configuration');
+
+      const targetCoins = await targetCoinsRes.json();
+      const activeCoins = targetCoins.filter((coin: any) => coin.enabled);
+      const ids = activeCoins.map((coin: any) => coin.id).join(',');
+
+      if (!ids) {
+        // If no target coins are configured, use an empty array
+        setData([]);
+        setStatus('ONLINE');
+        setLastUpdated(new Date().toLocaleTimeString());
+        return;
+      }
+
       // Request via Proxy
       const marketsParams = `vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=true&price_change_percentage=24h`;
       const priceParams = `ids=tether&vs_currencies=idr`;
@@ -38,7 +45,7 @@ export const useCryptoData = () => {
       if (!coinsRes.ok) throw new Error('API Error loading coins');
 
       const result: CoinData[] = await coinsRes.json();
-      
+
       // Parse IDR Rate (Safe parsing)
       if (rateRes.ok) {
           try {
@@ -49,8 +56,8 @@ export const useCryptoData = () => {
           } catch(e) { /* Ignore rate parse error */ }
       }
 
-      const processed: ProcessedCoinData[] = TARGET_COINS.map((id) => {
-        const item = result.find((coin) => coin.id === id);
+      const processed: ProcessedCoinData[] = activeCoins.map((targetCoin: any) => {
+        const item = result.find((coin: any) => coin.id === targetCoin.id);
         if (!item) return null;
 
         // Calculate H4 Change
@@ -68,7 +75,7 @@ export const useCryptoData = () => {
           ...item,
           h4_change,
         };
-      }).filter((item): item is ProcessedCoinData => item !== null);
+      }).filter((item: ProcessedCoinData | null): item is ProcessedCoinData => item !== null);
 
       setData(processed);
       setStatus('ONLINE');
