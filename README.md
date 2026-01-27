@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crypto Swing Analyzer
 
-## Getting Started
+A comprehensive cryptocurrency swing trading analysis tool powered by AI.
 
-First, run the development server:
+## Features
+
+- Real-time market data visualization (H4 & D1 timeframes)
+- AI-powered swing trading recommendations
+- Portfolio tracking and management
+- Dynamic target coins configuration
+- Indonesian localization
+- Responsive web interface
+- Docker containerization for easy deployment
+
+## Prerequisites
+
+- Docker and Docker Compose
+- Google Gemini API key
+
+## Setup Instructions
+
+### 1. Clone the repository
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/luthfialghz/crypto-swing-analyzer.git
+cd crypto-swing-analyzer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env` file in the project root with your Gemini API key:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-## Learn More
+### 3. Build and Run with Docker Compose
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Build and start the application
+docker-compose up -d
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# View logs
+docker-compose logs -f
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Stop the application
+docker-compose down
+```
 
-## Deploy on Vercel
+The application will be available at `http://localhost:3000`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 4. Alternative: Build and Run Individual Container
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Navigate to the web-app directory
+cd web-app
+
+# Build the Docker image
+docker build -t crypto-swing-analyzer .
+
+# Run the container
+docker run -p 3000:3000 -e GEMINI_API_KEY=your_api_key_here crypto-swing-analyzer
+```
+
+## Configuration
+
+- The application stores portfolio data in the `./web-app/data` directory
+- The API key can be passed as an environment variable
+- Port can be changed in the docker-compose.yml file
+- Health check endpoint available at `/api/health`
+
+## Development
+
+For development purposes, you can run the application without Docker:
+
+```bash
+cd web-app
+npm install
+npm run dev
+```
+
+## Architecture
+
+- Built with Next.js 14 and TypeScript
+- Uses Tailwind CSS for styling
+- Integrates with CoinGecko API for market data
+- Powered by Google Gemini AI for analysis
+- Includes a dynamic target coins management system
+- Containerized with Docker for consistent deployments
+
+## Docker Configuration
+
+The application is configured with the following Docker features:
+- Production-optimized Next.js build using standalone output
+- Health check endpoint for container monitoring
+- Persistent volume for portfolio data
+- Environment variable support for API keys
+- Proper port mapping for web access
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
