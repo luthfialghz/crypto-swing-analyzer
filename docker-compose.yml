@@ -33,3 +33,7 @@ services:
   #     - redis_data:/data
   #   restart: unless-stopped
   #   command: redis-server --appendonly yes
+
+# Named volumes (currently unused, but available if needed)
+# volumes:
+#   redis_data:
