@@ -24,16 +24,6 @@ services:
       retries: 3
       start_period: 60s
 
-  # Optional: Redis for caching (can be enabled if needed)
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   restart: unless-stopped
-  #   command: redis-server --appendonly yes
-
 # Named volumes (currently unused, but available if needed)
 # volumes:
 #   redis_data:
