@@ -33,36 +33,51 @@ interface CryptoChartProps {
 }
 
 export const CryptoChart = ({ data, color, sparkline = false, type = 'line' }: CryptoChartProps) => {
-  const chartRef = useRef<ChartJS<'line' | 'scatter' | 'bubble' | 'pie' | 'doughnut' | 'polarArea' | 'radar' | 'bar' | undefined, number[], string>>(null); // Corrected generic type for ChartJS
+  const chartRef = useRef<ChartJS<'line'>>(null);
 
   const getGradient = (chart: ChartJS) => {
     const { ctx, chartArea } = chart;
     if (!chartArea) {
-      return null;
+      return undefined;
     }
     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-    gradient.addColorStop(0, `${color.replace('rgb', 'rgba').replace(')', ', 0.0)')}`); // Transparent at bottom
-    gradient.addColorStop(0.5, `${color.replace('rgb', 'rgba').replace(')', ', 0.15)')}`); // Semi-transparent in middle
-    gradient.addColorStop(1, `${color.replace('rgb', 'rgba').replace(')', ', 0.3)')}`); // More opaque at top
+    
+    // Convert hex to rgba if needed
+    const baseColor = color.startsWith('#') ? hexToRgb(color) : color;
+    const isRgb = baseColor.startsWith('rgb');
+
+    if (isRgb) {
+      gradient.addColorStop(0, baseColor.replace('rgb', 'rgba').replace(')', ', 0)'));
+      gradient.addColorStop(0.5, baseColor.replace('rgb', 'rgba').replace(')', ', 0.1)'));
+      gradient.addColorStop(1, baseColor.replace('rgb', 'rgba').replace(')', ', 0.2)'));
+    } else {
+      gradient.addColorStop(0, `${baseColor}00`);
+      gradient.addColorStop(1, `${baseColor}33`);
+    }
     return gradient;
   };
 
+  function hexToRgb(hex: string) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? `rgb(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)})` : hex;
+  }
+
   const chartData = {
-    labels: data.map((_, i) => i.toString()), // Use index as label, will be hidden for sparklines
+    labels: data.map((_, i) => i.toString()),
     datasets: [
       {
         data: data,
         borderColor: color,
-        borderWidth: sparkline ? 1 : 2,
-        backgroundColor: type === 'area' ? (context: any) => getGradient(context.chart) : color.replace(')', ', 0.1)').replace('rgb', 'rgba'), // Use gradient for area
+        borderWidth: sparkline ? 1.5 : 3,
+        backgroundColor: type === 'area' ? (context: any) => getGradient(context.chart) : 'transparent',
         fill: type === 'area',
-        tension: sparkline ? 0.2 : 0.4, // Less tension for sparklines
-        pointRadius: sparkline ? 0 : 3, // Hide points for sparklines
-        pointBackgroundColor: color,
-        pointBorderColor: '#fff',
-        pointHoverRadius: sparkline ? 0 : 5,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: sparkline ? 0 : 6,
+        pointHitRadius: 10,
         pointHoverBackgroundColor: color,
         pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
       },
     ],
   };
