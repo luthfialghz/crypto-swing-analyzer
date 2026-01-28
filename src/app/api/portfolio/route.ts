@@ -22,15 +22,28 @@ async function getPortfolio(): Promise<PortfolioData> {
   try {
     const data = await fs.readFile(DB_PATH, 'utf-8');
     const parsed = JSON.parse(data);
-    console.log(`[Portfolio API] Successfully read portfolio. USDT Balance: $${parsed.usdtBalance}, Holdings: ${parsed.holdings?.length || 0}`);
+    console.log(`[Portfolio API] Successfully read portfolio. USDT Balance: $${parsed.usdtBalance}`);
     return parsed;
   } catch (error: any) {
     if (error.code === 'ENOENT') {
-      console.warn(`[Portfolio API] portfolio.json not found at ${DB_PATH}. Returning default empty portfolio.`);
-    } else {
-      console.error(`[Portfolio API] Error reading portfolio:`, error);
+      console.warn(`[Portfolio API] portfolio.json not found. Initializing default data...`);
+      const defaultData: PortfolioData = { 
+        usdtBalance: 1000, // Memberikan saldo awal agar tidak $0
+        holdings: [] 
+      };
+      // Manually trigger save to create the file
+      try {
+        const dir = path.dirname(DB_PATH);
+        await fs.mkdir(dir, { recursive: true });
+        await fs.writeFile(DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
+        console.log(`[Portfolio API] Created default portfolio.json at ${DB_PATH}`);
+        return defaultData;
+      } catch (saveErr) {
+        console.error(`[Portfolio API] Failed to auto-initialize file:`, saveErr);
+        return defaultData;
+      }
     }
-    // Jika file tidak ada, return default
+    console.error(`[Portfolio API] Error reading portfolio:`, error);
     return { usdtBalance: 0, holdings: [] };
   }
 }
