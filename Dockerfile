@@ -4,26 +4,20 @@ FROM node:18-alpine AS base
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a54ddd958de687b09de40#nodealpine
 # for optimal alpine image
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm install --only=production
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 
-# Install additional build dependencies if needed
-RUN apk add --no-cache python3 make g++ libc6-compat
-
-# Copy necessary source files for the build
+# Copy source code
 COPY . .
-
-# Copy .env files if they exist (for build-time environment variables)
-COPY .env* ./
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
@@ -33,7 +27,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Set NODE_ENV for build
 ENV NODE_ENV=production
 
-# Run the build command with increased memory limit if needed
+# Run the build command
 RUN npm run build
 
 # Production image, copy all the files and run next
