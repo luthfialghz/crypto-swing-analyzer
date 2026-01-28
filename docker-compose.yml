@@ -38,6 +38,22 @@ services:
         reservations:
           memory: 1G
 
+  scheduler:
+    build:
+      context: ./scheduler
+      dockerfile: Dockerfile
+    environment:
+      - API_URL=http://app:3000/api/daily-scheduler
+      - TZ=Asia/Jakarta
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+# Named volumes (currently unused, but available if needed)
+# volumes:
+#   redis_data:
+
 # Named volumes (currently unused, but available if needed)
 # volumes:
 #   redis_data:
