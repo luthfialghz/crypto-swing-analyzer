@@ -11,18 +11,14 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application code
 COPY . .
 
-# Ensure that any local config files are not interfering
-RUN rm -f .env.local .env.production || true
-
 # Set environment variables for the build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_BASE_PATH=
 
 # Run the build command
 RUN npm run build
@@ -48,7 +44,6 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy the standalone output and public directory from builder stage
 COPY --from=base --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=base --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=base --chown=nextjs:nodejs /app/public ./public
 
 # Switch to non-root user
