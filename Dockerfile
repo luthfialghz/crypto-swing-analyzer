@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+RUN npm install --verbose
 
 # Copy the rest of the application code
 COPY . .
@@ -20,7 +20,7 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Run the build command
+# Run the build command with more memory if needed
 RUN npm run build
 
 # Production image, copy all the files and run next
