@@ -16,13 +16,24 @@ RUN npm install --verbose
 # Copy the rest of the application code
 COPY . .
 
+# Debug: Print current directory and files
+RUN echo "=== Current directory contents ===" && ls -la && echo "==============================="
+
+# Debug: Print environment variables
+RUN echo "=== Environment Variables ===" && env && echo "============================="
+
 # Set environment variables for the build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV CI=false
+ENV NEXT_PUBLIC_BASE_PATH=
+ENV PORT=3000
 
-# Run the build command
-RUN npm run build
+# Check if there are any .env files that might affect the build
+RUN if [ -f .env ]; then echo "Found .env file"; else echo "No .env file found"; fi
+
+# Run the build command with more verbose output
+RUN echo "Starting build process..." && npm run build
 
 # Production image, copy all the files and run next
 FROM node:18-alpine AS runner
