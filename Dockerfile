@@ -52,6 +52,7 @@ RUN npm install --production --verbose
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/data ./data
 
 # Expose port
 EXPOSE 3000
@@ -62,9 +63,11 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+# Create data directory and set permissions (important for volumes)
+RUN mkdir -p /app/data && \
+    addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    chown -R nextjs:nodejs /app/data
 
 # Change ownership of the app directory
 RUN chown -R nextjs:nodejs /app
