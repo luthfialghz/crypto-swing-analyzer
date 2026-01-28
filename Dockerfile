@@ -16,22 +16,13 @@ RUN npm install --verbose
 # Copy the rest of the application code
 COPY . .
 
-# Debug: Show current directory and files
-RUN ls -la
-
 # Set environment variables for the build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# Add any required environment variables for build
 ENV CI=false
-ENV NEXT_PUBLIC_BASE_PATH=
-ENV NEXT_PUBLIC_API_URL=
 
-# Debug: Show environment variables
-RUN env | grep -E "(NODE_|NEXT_|CI)"
-
-# Run the build command with more memory if needed and better error reporting
-RUN npm run build || (echo "Build failed, checking for common issues..." && npm audit && npm run build)
+# Run the build command
+RUN npm run build
 
 # Production image, copy all the files and run next
 FROM node:18-alpine AS runner
