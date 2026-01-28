@@ -3,6 +3,7 @@ import { TargetCoinsManager } from '@/components/TargetCoinsManager';
 import { TestNotificationButton } from '@/components/TestNotificationButton';
 import { SendAIAnalysisButton } from '@/components/SendAIAnalysisButton';
 import { TestFullProcessButton } from '@/components/TestFullProcessButton';
+import { DebugPortfolioButton } from '@/components/DebugPortfolioButton';
 import { ArrowLeft, Settings, Database, Activity, Terminal } from 'lucide-react';
 import Link from 'next/link';
 
@@ -65,6 +66,11 @@ export default function SettingsPage() {
                     <TestNotificationButton />
                     <SendAIAnalysisButton />
                     <TestFullProcessButton />
+                  </div>
+
+                  <div className="flex flex-col gap-3 pt-6 mt-6 border-t border-white/5">
+                    <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest px-2 text-violet-400">Data Integrity Check</p>
+                    <DebugPortfolioButton />
                   </div>
 
                   <div className="pt-6 mt-6 border-t border-white/5 space-y-4">

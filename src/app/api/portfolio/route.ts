@@ -18,10 +18,18 @@ interface PortfolioData {
 
 // Helper untuk membaca DB
 async function getPortfolio(): Promise<PortfolioData> {
+  console.log(`[Portfolio API] Attempting to read portfolio from: ${DB_PATH}`);
   try {
     const data = await fs.readFile(DB_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
+    const parsed = JSON.parse(data);
+    console.log(`[Portfolio API] Successfully read portfolio. USDT Balance: $${parsed.usdtBalance}, Holdings: ${parsed.holdings?.length || 0}`);
+    return parsed;
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      console.warn(`[Portfolio API] portfolio.json not found at ${DB_PATH}. Returning default empty portfolio.`);
+    } else {
+      console.error(`[Portfolio API] Error reading portfolio:`, error);
+    }
     // Jika file tidak ada, return default
     return { usdtBalance: 0, holdings: [] };
   }
@@ -29,10 +37,22 @@ async function getPortfolio(): Promise<PortfolioData> {
 
 // Helper untuk menulis DB
 async function savePortfolio(data: PortfolioData) {
-  await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  console.log(`[Portfolio API] Attempting to save portfolio to: ${DB_PATH}`);
+  try {
+    // Ensure directory exists
+    const dir = path.dirname(DB_PATH);
+    await fs.mkdir(dir, { recursive: true });
+    
+    await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    console.log(`[Portfolio API] Successfully saved portfolio. USDT Balance: $${data.usdtBalance}`);
+  } catch (error) {
+    console.error(`[Portfolio API] Error saving portfolio:`, error);
+    throw error;
+  }
 }
 
 export async function GET() {
+  console.log('[Portfolio API] GET request received');
   const data = await getPortfolio();
   return NextResponse.json(data);
 }
@@ -40,65 +60,65 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log(`[Portfolio API] POST request received. Action: ${body.action}`);
+    
     const currentData = await getPortfolio();
-
-    // Update data (Merge logic sederhana)
-    // Body bisa berisi { usdtBalance: ... } atau { holding: ... }
 
     let newData = { ...currentData };
 
     if (body.action === 'update_balance') {
         newData.usdtBalance = body.usdtBalance;
+        console.log(`[Portfolio API] Updating balance to: $${body.usdtBalance}`);
     }
     else if (body.action === 'add_holding') {
         const { id, amount, avgBuyPrice } = body.holding;
-        // Cek jika coin sudah ada, update average (simplified: replace or add logic)
-        // Disini kita akan simple add/replace
+        console.log(`[Portfolio API] Adding/Updating holding: ${id}, Amount: ${amount}`);
         const existingIndex = newData.holdings.findIndex((h: Holding) => h.id === id);
 
         if (existingIndex >= 0) {
-            // Update existing
             newData.holdings[existingIndex] = { id, amount, avgBuyPrice };
         } else {
-            // New holding
             newData.holdings.push({ id, amount, avgBuyPrice });
         }
     }
     else if (body.action === 'remove_holding') {
+        console.log(`[Portfolio API] Removing holding: ${body.id}`);
         newData.holdings = newData.holdings.filter((h: Holding) => h.id !== body.id);
     }
 
     await savePortfolio(newData);
     return NextResponse.json(newData);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to save data' }, { status: 500 });
+    console.error(`[Portfolio API] POST handler error:`, error);
+    return NextResponse.json({ error: 'Failed to process portfolio update' }, { status: 500 });
   }
 }
 
 // New endpoint to get portfolio context for AI analysis
 export async function PUT(request: Request) {
+  console.log('[Portfolio API] PUT request received (Strategy Context)');
   try {
     const currentData = await getPortfolio();
 
-    // Create a comprehensive portfolio context for the AI
     const portfolioContext = {
       usdtBalance: currentData.usdtBalance,
       totalHoldings: currentData.holdings.length,
-      totalValueUSD: 0, // Will be calculated after fetching current prices
+      totalValueUSD: 0,
       holdings: currentData.holdings,
-      cashPercentage: 0, // Will be calculated after total value is known
+      cashPercentage: 0,
       diversification: currentData.holdings.length > 0 ?
         Math.min(100, Math.floor(100 / currentData.holdings.length)) : 100
     };
 
-    // Create a human-readable string for the AI
-    const contextString = `Portfolio: USDT Balance: $${currentData.usdtBalance.toFixed(2)}, Holdings Count: ${currentData.holdings.length}, Target Diversification: ${portfolioContext.diversification}% per coin. Available funds: $${currentData.usdtBalance.toFixed(2)}.`;
+    const contextString = `Portfolio: USDT Balance: $${currentData.usdtBalance.toFixed(2)}, Holdings Count: ${currentData.holdings.length}, Target Diversification: ${portfolioContext.diversification}% per coin.`;
 
     return NextResponse.json({
       context: contextString,
       details: portfolioContext
     });
   } catch (error) {
+    console.error(`[Portfolio API] PUT handler error:`, error);
     return NextResponse.json({ error: 'Failed to generate portfolio context' }, { status: 500 });
   }
 }
+
