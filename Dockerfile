@@ -72,8 +72,8 @@ RUN mkdir -p /app/data && \
 # Change ownership of the app directory
 RUN chown -R nextjs:nodejs /app
 
-# Switch to non-root user
-USER nextjs
+# Switch to non-root user (Commented out to solve EACCES permission denied on volumes)
+# USER nextjs
 
 # Start the application
 CMD ["node", "server.js"]
