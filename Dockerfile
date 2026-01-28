@@ -1,11 +1,14 @@
-# Use a specific Node.js version
-FROM node:18-alpine
+# Multi-stage build to separate build and runtime environments
+FROM node:20-alpine AS builder
 
-# Install necessary runtime dependencies
-RUN apk add --no-cache libc6-compat
+# Install necessary build tools and dependencies
+RUN apk add --no-cache libc6-compat python3 make g++ curl
 
 # Set working directory
 WORKDIR /app
+
+# Increase Node.js memory limit for the build process
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Copy package files
 COPY package*.json ./
@@ -21,8 +24,26 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV CI=false
 
-# Build the application
+# Build the application with increased memory
 RUN npm run build
+
+# Production stage
+FROM node:20-alpine AS runner
+
+# Install necessary runtime dependencies
+RUN apk add --no-cache libc6-compat curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy production dependencies
+COPY package*.json ./
+RUN npm install --production --verbose
+
+# Copy the built application from the builder stage
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 # Expose port
 EXPOSE 3000
@@ -44,4 +65,4 @@ RUN chown -R nextjs:nodejs /app
 USER nextjs
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
