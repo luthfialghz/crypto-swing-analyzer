@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Plus, Trash2, CheckCircle, XCircle, Database } from 'lucide-react';
 
 interface TargetCoin {
   id: string;
@@ -145,160 +145,159 @@ export const TargetCoinsManager = ({ onCoinsChange }: TargetCoinsManagerProps) =
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-slate-700/50 bg-slate-900/40 p-8 backdrop-blur-xl">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="glass rounded-[2rem] p-12">
+        <div className="flex flex-col items-center justify-center py-12 gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-blue"></div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Syncing Markets...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-3xl border border-slate-700/50 bg-slate-900/40 p-8 backdrop-blur-xl">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+    <div className="glass rounded-[2rem] p-8 overflow-hidden relative group">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10">
         <div>
-          <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
-            <span className="p-2 rounded-lg bg-blue-500/20 text-blue-400">
-              <Search size={24} />
-            </span>
-            Target Coins Manager
+          <h2 className="text-2xl font-black flex items-center gap-4 text-white tracking-tight">
+            <div className="p-2.5 rounded-xl bg-accent-blue/10 border border-accent-blue/20">
+              <Database size={24} className="text-accent-blue" />
+            </div>
+            Target Markets
           </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Manage which cryptocurrencies to track and analyze
+          <p className="text-text-secondary text-xs font-medium mt-2">
+            Configure automated tracking for specific crypto assets
           </p>
         </div>
 
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-400 hover:to-cyan-400 shadow-blue-500/25"
+          className={`inline-flex items-center px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            showForm 
+              ? 'bg-white/5 text-white hover:bg-white/10' 
+              : 'bg-accent-blue text-white shadow-lg shadow-accent-blue/20 hover:brightness-110'
+          }`}
         >
-          <Plus size={18} className="mr-2" />
-          {showForm ? 'Cancel' : 'Add Coin'}
+          {showForm ? <XCircle size={18} className="mr-2" /> : <Plus size={18} className="mr-2" />}
+          {showForm ? 'Cancel Operation' : 'Register Market'}
         </button>
       </div>
 
       {/* Add Coin Form */}
       {showForm && (
-        <div className="mb-8 p-6 rounded-2xl border border-slate-700/50 bg-slate-800/30">
-          <h3 className="text-lg font-semibold text-white mb-4">Add New Target Coin</h3>
+        <div className="mb-10 p-8 rounded-[1.5rem] bg-white/5 border border-white/5 animate-fade-in">
+          <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest">New Market Protocol</h3>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400">
+            <div className="mb-6 p-4 rounded-xl bg-accent-red/10 border border-accent-red/20 text-accent-red text-xs font-bold">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">CoinGecko ID *</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary px-1">CoinGecko ID</label>
               <input
                 type="text"
                 value={newCoinId}
                 onChange={(e) => setNewCoinId(e.target.value)}
-                placeholder="e.g., bitcoin, ethereum"
-                className="w-full px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., bitcoin"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
               />
-              <p className="text-xs text-slate-500 mt-1">Find on CoinGecko API</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Display Name *</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary px-1">Display Name</label>
               <input
                 type="text"
                 value={newCoinName}
                 onChange={(e) => setNewCoinName(e.target.value)}
                 placeholder="e.g., Bitcoin"
-                className="w-full px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Symbol *</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary px-1">Symbol</label>
               <input
                 type="text"
                 value={newCoinSymbol}
                 onChange={(e) => setNewCoinSymbol(e.target.value.toUpperCase())}
                 placeholder="e.g., BTC"
-                className="w-full px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all"
               />
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <button
               onClick={handleAddCoin}
-              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium transition-colors"
+              className="px-8 py-3 rounded-xl bg-accent-green text-white text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all active:scale-95"
             >
-              Add Coin
-            </button>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setError('');
-              }}
-              className="px-6 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition-colors"
-            >
-              Cancel
+              Initialize Node
             </button>
           </div>
         </div>
       )}
 
       {/* Search Bar */}
-      <div className="mb-6 relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-slate-500" />
+      <div className="mb-8 relative group/search">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-text-secondary group-focus-within/search:text-white transition-colors" />
         </div>
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search coins by ID, name, or symbol..."
-          className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Filter protocols..."
+          className="w-full pl-12 pr-4 py-4 rounded-2xl bg-black/20 border border-white/5 text-white placeholder-text-secondary/50 focus:outline-none focus:border-white/10 transition-all font-medium text-sm"
         />
       </div>
 
       {/* Coins List */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="border-b border-slate-700/50">
-            <tr>
-              <th className="py-3 px-4 text-left text-slate-400 font-medium">Status</th>
-              <th className="py-3 px-4 text-left text-slate-400 font-medium">Coin ID</th>
-              <th className="py-3 px-4 text-left text-slate-400 font-medium">Name</th>
-              <th className="py-3 px-4 text-left text-slate-400 font-medium">Symbol</th>
-              <th className="py-3 px-4 text-left text-slate-400 font-medium">Added</th>
-              <th className="py-3 px-4 text-right text-slate-400 font-medium">Actions</th>
+          <thead>
+            <tr className="border-b border-white/5">
+              <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Status</th>
+              <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Identifier</th>
+              <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Network Name</th>
+              <th className="py-4 px-4 text-left text-[10px] font-black uppercase tracking-widest text-text-secondary">Symbol</th>
+              <th className="py-4 px-4 text-right text-[10px] font-black uppercase tracking-widest text-text-secondary">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/5">
             {filteredCoins.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 px-4 text-center text-slate-500">
-                  {searchTerm ? 'No coins match your search' : 'No target coins configured'}
+                <td colSpan={5} className="py-12 px-4 text-center text-text-secondary text-xs italic font-medium">
+                  {searchTerm ? 'No protocols match search' : 'No target markets initialized'}
                 </td>
               </tr>
             ) : (
               filteredCoins.map((coin) => (
-                <tr key={coin.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                  <td className="py-4 px-4">
+                <tr key={coin.id} className="group/row hover:bg-white/[0.02] transition-colors">
+                  <td className="py-5 px-4">
                     <button
                       onClick={() => handleToggleCoin(coin.id)}
-                      className={`flex items-center gap-2 ${coin.enabled ? 'text-emerald-400' : 'text-rose-400'}`}
+                      className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        coin.enabled ? 'text-accent-green' : 'text-accent-red opacity-60 hover:opacity-100'
+                      }`}
                     >
-                      {coin.enabled ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                      <span>{coin.enabled ? 'Active' : 'Inactive'}</span>
+                      {coin.enabled ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                      <span>{coin.enabled ? 'Online' : 'Offline'}</span>
                     </button>
                   </td>
-                  <td className="py-4 px-4 font-mono text-slate-300">{coin.id}</td>
-                  <td className="py-4 px-4 text-white">{coin.name}</td>
-                  <td className="py-4 px-4 font-bold text-white">{coin.symbol}</td>
-                  <td className="py-4 px-4 text-slate-400">{new Date(coin.createdAt).toLocaleDateString()}</td>
-                  <td className="py-4 px-4 text-right">
+                  <td className="py-5 px-4 font-mono text-xs text-text-secondary group-hover/row:text-white transition-colors">{coin.id}</td>
+                  <td className="py-5 px-4 text-sm font-bold text-white">{coin.name}</td>
+                  <td className="py-5 px-4">
+                    <span className="px-2 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
+                      {coin.symbol}
+                    </span>
+                  </td>
+                  <td className="py-5 px-4 text-right">
                     <button
                       onClick={() => handleRemoveCoin(coin.id)}
-                      className="p-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 transition-colors"
-                      title="Remove coin"
+                      className="p-2 rounded-xl bg-accent-red/10 text-accent-red hover:bg-accent-red hover:text-white transition-all opacity-0 group-hover/row:opacity-100"
+                      title="Decommission node"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -310,8 +309,11 @@ export const TargetCoinsManager = ({ onCoinsChange }: TargetCoinsManagerProps) =
         </table>
       </div>
 
-      <div className="mt-6 text-sm text-slate-500">
-        <p><strong>Note:</strong> Use CoinGecko API IDs for accurate data retrieval. Active coins will be included in analysis.</p>
+      <div className="mt-10 p-4 rounded-xl bg-accent-blue/5 border border-accent-blue/10">
+        <p className="text-[10px] font-bold text-accent-blue uppercase tracking-widest flex items-center gap-2">
+          <CheckCircle size={12} /> Root Node Advisory
+        </p>
+        <p className="text-[10px] text-text-secondary mt-1 font-medium">Use official CoinGecko API IDs for data integrity. Analysis only executes on Online nodes.</p>
       </div>
     </div>
   );

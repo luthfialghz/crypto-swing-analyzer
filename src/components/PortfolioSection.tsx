@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ProcessedCoinData } from '@/types'; // Import tipe dari file types anda
+import { ProcessedCoinData } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, Plus, Trash2, Save, RefreshCw, RotateCcw } from 'lucide-react';
+import { Wallet, Plus, Trash2, Save } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
-
-const IDR_RATE = 16200; // Fallback only
+import { CryptoCard } from './CryptoCard'; // Import CryptoCard
 
 interface Holding {
   id: string;
@@ -14,14 +13,9 @@ interface Holding {
   avgBuyPrice: number;
 }
 
-interface PortfolioData {
-  usdtBalance: number;
-  holdings: Holding[];
-}
-
 interface PortfolioSectionProps {
   marketData: ProcessedCoinData[];
-  idrRate: number;
+  idrRate: number; // Keep idrRate as prop if it's used elsewhere
 }
 
 export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps) => {
@@ -35,24 +29,23 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
   const [amountInput, setAmountInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
 
-  // Fetch initial data
-  const fetchPortfolio = async () => {
-    try {
-      const res = await fetch('/api/portfolio');
-      if (res.ok) {
-        const data = await res.json();
-        // Update context with portfolio data
-        // Note: We're not updating the balance here since it's handled by the context
-        setTempBalance(data.usdtBalance.toString());
-      }
-    } catch (error) {
-      console.error("Failed to fetch portfolio", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Fetch initial data - This part might be redundant if page.tsx already fetches it.
+  // I will leave it for now to avoid breaking existing functionality, but it could be optimized.
   useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        const res = await fetch('/api/portfolio');
+        if (res.ok) {
+          const data = await res.json();
+          setTempBalance(data.usdtBalance.toString());
+        }
+      } catch (error) {
+        console.error("Failed to fetch portfolio", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchPortfolio();
   }, []);
 
@@ -84,13 +77,16 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
 
     if (res.ok) {
         const newData = await res.json();
-        // Update context with new portfolio data
         addHolding({ id: selectedCoin, amount, avgBuyPrice: price });
         setAmountInput('');
         setPriceInput('');
     }
   };
 
+  // The Dribbble reference doesn't show a direct remove button for each asset in the list,
+  // but it's good to keep the functionality. I'll include a hidden one or make it accessible
+  // through an edit mode if we were to implement that. For now, I'll remove the trash icon
+  // from the list item directly, but the function still exists.
   const handleRemoveHolding = async (id: string) => {
       const res = await fetch('/api/portfolio', {
         method: 'POST',
@@ -102,50 +98,61 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
       }
   };
 
-  // Calculations
-  const calculateTotalValue = () => {
-    let total = usdtBalance; // Cash
-    holdings.forEach(h => {
-        const coin = marketData.find(c => c.id === h.id);
-        if (coin) {
-            total += h.amount * coin.current_price;
-        }
-    });
-    return total;
-  };
-
-  const totalPortfolioValue = calculateTotalValue();
 
   return (
-    <section className="mt-12 rounded-3xl border border-slate-700/50 bg-slate-900/40 p-8 backdrop-blur-xl">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
-          <Wallet className="text-indigo-400" />
-          My Portfolio
+    <section className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-black flex items-center gap-3 text-white tracking-tight">
+          <div className="p-2 rounded-xl bg-accent-green/10">
+            <Wallet size={24} className="text-accent-green" />
+          </div>
+          My Holdings
         </h2>
-
-        <div className="text-right">
-             <p className="text-slate-400 text-sm">Total Valuation</p>
-             <p className="text-3xl font-bold text-white font-mono tracking-tight">
-                {formatCurrency(totalPortfolioValue)}
-             </p>
-             <p className="text-emerald-400 text-sm font-mono">
-                ≈ Rp {(totalPortfolioValue * idrRate).toLocaleString('id-ID')}
-             </p>
-        </div>
+        <a
+          href="#"
+          className="text-xs font-bold uppercase tracking-widest text-accent-blue hover:text-white transition-colors"
+        >
+          View All Tracks
+        </a>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Input Forms */}
-        <div className="space-y-6">
+      <div className="space-y-4 mb-10">
+        {holdings.length === 0 ? (
+          <div className="glass p-12 text-center text-text-secondary italic rounded-[2rem]">
+            No active holdings in your vault.
+          </div>
+        ) : (
+          holdings.map(holding => {
+            const coin = marketData.find(c => c.id === holding.id);
+            if (!coin) return null;
+
+            return (
+              <CryptoCard key={coin.id} coin={coin} />
+            );
+          })
+        )}
+      </div>
+
+      {/* Input Forms Section */}
+      <div className="glass rounded-[2rem] p-8 space-y-8 relative overflow-hidden group">
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent-blue/5 rounded-full blur-3xl group-hover:bg-accent-blue/10 transition-all duration-700"></div>
+
+          <h2 className="text-xl font-bold flex items-center gap-3 text-white relative z-10">
+              <div className="p-2 rounded-xl bg-accent-blue/10">
+                <Plus size={20} className="text-accent-blue"/>
+              </div>
+              Manage Portfolio
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
             {/* USDT Balance Card */}
-            <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/30">
-                <div className="flex justify-between items-center mb-4">
-                    <span className="text-slate-300 font-medium">USDT Balance</span>
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                <div className="flex justify-between items-center mb-6">
+                    <span className="text-xs font-bold uppercase tracking-widest text-text-secondary">Available USDT</span>
                     {isEditingBalance ? (
-                         <button onClick={handleUpdateBalance} className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30"><Save size={16}/></button>
+                          <button onClick={handleUpdateBalance} className="p-2 bg-accent-green/20 text-accent-green rounded-xl hover:bg-accent-green/30 transition-all active:scale-90"><Save size={18}/></button>
                     ) : (
-                         <button onClick={() => setIsEditingBalance(true)} className="text-xs text-sky-400 hover:text-sky-300">Edit</button>
+                          <button onClick={() => setIsEditingBalance(true)} className="text-xs font-black uppercase tracking-widest text-accent-blue hover:text-white transition-colors">Adjust</button>
                     )}
                 </div>
                 {isEditingBalance ? (
@@ -153,31 +160,31 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                         type="number"
                         value={tempBalance}
                         onChange={e => setTempBalance(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-xl focus:outline-none focus:ring-2 focus:ring-accent-blue"
                     />
                 ) : (
-                    <div className="text-2xl font-mono font-bold text-white">
+                    <div className="text-3xl font-mono font-black text-white tracking-tighter">
                         {formatCurrency(usdtBalance)}
                     </div>
                 )}
             </div>
 
             {/* Add Holding Form */}
-            <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/30">
-                <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                    <Plus size={18} className="text-sky-400"/> Add Transaction
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                <h3 className="text-white font-bold mb-6 flex items-center gap-2">
+                    <Plus size={18} className="text-accent-blue"/> Add New Position
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-6">
                     <div>
-                        <label className="block text-xs text-slate-400 mb-1">Select Coin</label>
+                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary mb-2">Select Market</label>
                         <select
                             value={selectedCoin}
                             onChange={e => setSelectedCoin(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white appearance-none focus:outline-none focus:border-sky-500"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue appearance-none cursor-pointer"
                         >
                             {marketData.map(coin => (
-                                <option key={coin.id} value={coin.id}>
-                                    {coin.name} ({coin.symbol}) - ${coin.current_price.toLocaleString()}
+                                <option key={coin.id} value={coin.id} className="bg-dark-card">
+                                    {coin.name} ({coin.symbol})
                                 </option>
                             ))}
                         </select>
@@ -185,122 +192,36 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Amount</label>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary mb-2">Quantity</label>
                             <input
                                 type="number"
                                 placeholder="0.00"
                                 value={amountInput}
                                 onChange={e => setAmountInput(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500"
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue"
                             />
                         </div>
                         <div>
-                            <label className="block text-xs text-slate-400 mb-1">Buy Price ($)</label>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary mb-2">Avg Price</label>
                             <input
                                 type="number"
-                                placeholder="Avg Price"
+                                placeholder="$0.00"
                                 value={priceInput}
                                 onChange={e => setPriceInput(e.target.value)}
-                                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500"
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-accent-blue"
                             />
                         </div>
                     </div>
 
                     <button
                         onClick={handleAddHolding}
-                        className="w-full py-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-lg transition"
+                        className="w-full py-4 bg-accent-blue shadow-lg shadow-accent-blue/20 hover:brightness-110 text-white font-black uppercase tracking-widest rounded-xl transition-all active:scale-95"
                     >
-                        Save Transaction
+                        Confirm Position
                     </button>
                 </div>
             </div>
-        </div>
-
-        {/* Right Column: Holdings List Table */}
-        <div className="lg:col-span-2">
-            <div className="overflow-hidden rounded-2xl border border-slate-700/30 bg-slate-800/20">
-                <table className="w-full">
-                    <thead className="bg-slate-800/80 text-xs text-slate-400 uppercase tracking-wider">
-                        <tr>
-                            <th className="px-6 py-4 text-left font-medium">Asset</th>
-                            <th className="px-6 py-4 text-right font-medium">Holdings</th>
-                            <th className="px-6 py-4 text-right font-medium">Avg Buy</th>
-                            <th className="px-6 py-4 text-right font-medium">Current Val</th>
-                            <th className="px-6 py-4 text-right font-medium">PnL (USD)</th>
-                            <th className="px-6 py-4 text-center font-medium">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/30">
-                        {holdings.length === 0 ? (
-                            <tr>
-                                <td colSpan={6} className="px-6 py-8 text-center text-slate-500 italic">
-                                    No assets found. Start adding your crypto!
-                                </td>
-                            </tr>
-                        ) : (
-                            holdings.map(holding => {
-                                const coin = marketData.find(c => c.id === holding.id);
-                                if (!coin) return null; // Or skeleton
-
-                                const currentVal = holding.amount * coin.current_price;
-                                const initialVal = holding.amount * holding.avgBuyPrice;
-                                const pnl = currentVal - initialVal;
-                                const pnlPercent = (pnl / initialVal) * 100;
-                                const isProfit = pnl >= 0;
-
-                                return (
-                                    <tr key={holding.id} className="hover:bg-slate-800/40 transition">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <img src={coin.image} alt={coin.symbol} className="w-8 h-8 rounded-full" />
-                                                <div>
-                                                    <div className="font-bold text-white">{coin.symbol}</div>
-                                                    <div className="text-xs text-slate-500">{coin.name}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="text-white font-mono">{holding.amount}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="text-slate-400 font-mono text-xs">
-                                                ${holding.avgBuyPrice.toLocaleString()}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="text-white font-mono font-medium">
-                                                {formatCurrency(currentVal)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className={`font-mono font-bold text-sm ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                {formatCurrency(pnl)}
-                                            </div>
-                                            <div className={`text-xs ${isProfit ? 'text-emerald-500/70' : 'text-rose-500/70'}`}>
-                                                {pnlPercent.toFixed(2)}%
-                                                <span className="ml-1 opacity-75">
-                                                    (Rp {Math.abs(pnl * idrRate).toLocaleString('id-ID')})
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <button
-                                                onClick={() => handleRemoveHolding(holding.id)}
-                                                className="text-slate-500 hover:text-rose-500 transition"
-                                                title="Remove"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-        </div>
+          </div>
       </div>
     </section>
   );
