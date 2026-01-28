@@ -1,62 +1,65 @@
+# Use a specific Node.js version that matches your local environment
 FROM node:18-alpine AS base
 
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a54ddd958de687b09de40#nodealpine
-# for optimal alpine image
-RUN apk add --no-cache libc6-compat python3 make g++
+# Install necessary build tools and dependencies
+RUN apk add --no-cache libc6-compat python3 make g++ curl
+
+# Set working directory
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies for build)
 RUN npm install
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-
-# Copy source code
+# Copy the rest of the application code
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line to disable telemetry at build time
-ENV NEXT_TELEMETRY_DISABLED=1
+# Ensure that any local config files are not interfering
+RUN rm -f .env.local .env.production || true
 
-# Set NODE_ENV for build
+# Set environment variables for the build
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_BASE_PATH=
 
 # Run the build command
 RUN npm run build
 
 # Production image, copy all the files and run next
-FROM base AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+FROM node:18-alpine AS runner
 
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Create nextjs user with limited permissions
+# Set working directory
+WORKDIR /app
+
+# Set environment variables for runtime
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy the standalone output and other necessary files
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Copy the standalone output and public directory from builder stage
+COPY --from=base --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=base --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=base --chown=nextjs:nodejs /app/public ./public
 
+# Switch to non-root user
 USER nextjs
 
+# Expose port
 EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
 
 # Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
+# Start the application
 CMD ["node", "server.js"]
