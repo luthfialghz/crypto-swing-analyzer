@@ -9,12 +9,14 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy necessary source files for the build
 COPY . .
 
 # Copy .env files if they exist (optional for build-time environment variables)
@@ -28,6 +30,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Set NODE_ENV for build
 ENV NODE_ENV=production
 
+# Run the build command
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -43,7 +46,6 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy the standalone output and other necessary files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
@@ -53,7 +55,8 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || curl -f http://localhost:3000/ || exit 1
+  CMD curl -f http://localhost:3000/ || exit 1
 
 CMD ["node", "server.js"]
