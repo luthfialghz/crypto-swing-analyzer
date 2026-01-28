@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     if (!portfolioContext) {
       try {
         const portfolioRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/portfolio`, {
-          method: 'PUT'
+          method: 'GET'
         });
         if (portfolioRes.ok) {
           const portfolioData = await portfolioRes.json();
@@ -367,7 +367,7 @@ Aturan:
 
     return NextResponse.json(analysisResult);
   } catch (error: unknown) {
-    console.error('AI Analysis Error:', error);
+    console.error('AI Analysis Error:', JSON.stringify(error, null, 2));
 
     // Jika terjadi kesalahan API, kembalikan kuota
     if (dailyQuotaUsed > 0) {

@@ -317,7 +317,7 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                       <div>
                         <h6 className="text-xs font-semibold text-emerald-400 mb-2">Level Support</h6>
                         <div className="flex flex-wrap gap-2">
-                          {coin.keyLevels.support && coin.keyLevels.support.map((level, i) => (
+                          {coin.keyLevels?.support && coin.keyLevels.support.map((level, i) => (
                             <span key={i} className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-mono">
                               ${level ? level.toLocaleString() : 'N/A'}
                             </span>
@@ -327,7 +327,7 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                       <div>
                         <h6 className="text-xs font-semibold text-rose-400 mb-2">Level Resistance</h6>
                         <div className="flex flex-wrap gap-2">
-                          {coin.keyLevels.resistance && coin.keyLevels.resistance.map((level, i) => (
+                          {coin.keyLevels?.resistance && coin.keyLevels.resistance.map((level, i) => (
                             <span key={i} className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 text-xs font-mono">
                               ${level ? level.toLocaleString() : 'N/A'}
                             </span>
@@ -337,11 +337,11 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                     </div>
 
                     {/* Buy/Sell Percentage */}
-                    {(coin.buyPercentage > 0 || coin.sellPercentage > 0) && (
+                    {((coin.buyPercentage ?? 0) > 0 || (coin.sellPercentage ?? 0) > 0) && (
                       <div className="bg-slate-800/50 rounded-xl p-4">
                         <h6 className="text-xs font-semibold text-white mb-3">Alokasi Posisi Disarankan</h6>
                         <div className="flex gap-4">
-                          {coin.buyPercentage > 0 && (
+                          {((coin.buyPercentage ?? 0) > 0) && (
                             <div className="flex-1">
                               <div className="flex justify-between text-xs mb-1">
                                 <span className="text-emerald-400">Beli</span>
@@ -355,7 +355,7 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
                               </div>
                             </div>
                           )}
-                          {coin.sellPercentage > 0 && (
+                          {((coin.sellPercentage ?? 0) > 0) && (
                             <div className="flex-1">
                               <div className="flex justify-between text-xs mb-1">
                                 <span className="text-rose-400">Jual</span>
