@@ -16,10 +16,13 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 
+# Install additional build dependencies if needed
+RUN apk add --no-cache python3 make g++ libc6-compat
+
 # Copy necessary source files for the build
 COPY . .
 
-# Copy .env files if they exist (optional for build-time environment variables)
+# Copy .env files if they exist (for build-time environment variables)
 COPY .env* ./
 
 # Next.js collects completely anonymous telemetry data about general usage.
@@ -30,7 +33,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Set NODE_ENV for build
 ENV NODE_ENV=production
 
-# Run the build command
+# Run the build command with increased memory limit if needed
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -39,6 +42,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Create nextjs user with limited permissions
 RUN addgroup --system --gid 1001 nodejs && \
