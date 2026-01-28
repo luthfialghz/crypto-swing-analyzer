@@ -35,6 +35,17 @@ export interface KeyLevels {
   resistance: number[];
 }
 
+export interface AlternativeCoin {
+  id: string;
+  name: string;
+  symbol: string;
+  current_price: number;
+  price_change_percentage_24h: number;
+  h4_change: number;
+  image: string;
+  reasoning: string; // Why this coin is recommended as alternative
+}
+
 export interface CoinAnalysis {
   coinId: string;
   coinName: string;
@@ -52,6 +63,7 @@ export interface CoinAnalysis {
   swingPlan?: SwingPlan;
   riskLevel: 'RENDAH' | 'SEDANG' | 'TINGGI';
   keyLevels?: KeyLevels;
+  alternativeCoins?: AlternativeCoin[]; // Rekomendasi koin alternatif dari AI
 }
 
 export interface AIAnalysisResult {

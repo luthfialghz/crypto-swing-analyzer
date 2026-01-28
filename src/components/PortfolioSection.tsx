@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { ProcessedCoinData } from '@/types'; // Import tipe dari file types anda
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, Plus, Trash2, Save, RefreshCw } from 'lucide-react';
+import { Wallet, Plus, Trash2, Save, RefreshCw, RotateCcw } from 'lucide-react';
+import { usePortfolio } from '@/contexts/PortfolioContext';
 
 const IDR_RATE = 16200; // Fallback only
 
@@ -24,7 +25,7 @@ interface PortfolioSectionProps {
 }
 
 export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps) => {
-  const [portfolio, setPortfolio] = useState<PortfolioData>({ usdtBalance: 0, holdings: [] });
+  const { usdtBalance, holdings, updateBalance, addHolding, removeHolding } = usePortfolio();
   const [loading, setLoading] = useState(true);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [tempBalance, setTempBalance] = useState('0');
@@ -40,7 +41,8 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
       const res = await fetch('/api/portfolio');
       if (res.ok) {
         const data = await res.json();
-        setPortfolio(data);
+        // Update context with portfolio data
+        // Note: We're not updating the balance here since it's handled by the context
         setTempBalance(data.usdtBalance.toString());
       }
     } catch (error) {
@@ -55,7 +57,7 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
   }, []);
 
   // Actions
-  const updateBalance = async () => {
+  const handleUpdateBalance = async () => {
     const newBalance = parseFloat(tempBalance);
     if (isNaN(newBalance)) return;
 
@@ -63,11 +65,11 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
       method: 'POST',
       body: JSON.stringify({ action: 'update_balance', usdtBalance: newBalance }),
     });
-    setPortfolio(prev => ({ ...prev, usdtBalance: newBalance }));
+    updateBalance(newBalance);
     setIsEditingBalance(false);
   };
 
-  const addHolding = async () => {
+  const handleAddHolding = async () => {
     const amount = parseFloat(amountInput);
     const price = parseFloat(priceInput);
     if (!amount || !price) return;
@@ -82,27 +84,28 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
 
     if (res.ok) {
         const newData = await res.json();
-        setPortfolio(newData);
+        // Update context with new portfolio data
+        addHolding({ id: selectedCoin, amount, avgBuyPrice: price });
         setAmountInput('');
         setPriceInput('');
     }
   };
 
-  const removeHolding = async (id: string) => {
+  const handleRemoveHolding = async (id: string) => {
       const res = await fetch('/api/portfolio', {
         method: 'POST',
         body: JSON.stringify({ action: 'remove_holding', id }),
       });
       if (res.ok) {
           const newData = await res.json();
-          setPortfolio(newData);
+          removeHolding(id);
       }
   };
 
   // Calculations
   const calculateTotalValue = () => {
-    let total = portfolio.usdtBalance; // Cash
-    portfolio.holdings.forEach(h => {
+    let total = usdtBalance; // Cash
+    holdings.forEach(h => {
         const coin = marketData.find(c => c.id === h.id);
         if (coin) {
             total += h.amount * coin.current_price;
@@ -120,7 +123,7 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
           <Wallet className="text-indigo-400" />
           My Portfolio
         </h2>
-        
+
         <div className="text-right">
              <p className="text-slate-400 text-sm">Total Valuation</p>
              <p className="text-3xl font-bold text-white font-mono tracking-tight">
@@ -140,21 +143,21 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                 <div className="flex justify-between items-center mb-4">
                     <span className="text-slate-300 font-medium">USDT Balance</span>
                     {isEditingBalance ? (
-                         <button onClick={updateBalance} className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30"><Save size={16}/></button>
+                         <button onClick={handleUpdateBalance} className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30"><Save size={16}/></button>
                     ) : (
                          <button onClick={() => setIsEditingBalance(true)} className="text-xs text-sky-400 hover:text-sky-300">Edit</button>
                     )}
                 </div>
                 {isEditingBalance ? (
-                    <input 
-                        type="number" 
-                        value={tempBalance} 
+                    <input
+                        type="number"
+                        value={tempBalance}
                         onChange={e => setTempBalance(e.target.value)}
                         className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-sky-500"
                     />
                 ) : (
                     <div className="text-2xl font-mono font-bold text-white">
-                        {formatCurrency(portfolio.usdtBalance)}
+                        {formatCurrency(usdtBalance)}
                     </div>
                 )}
             </div>
@@ -167,8 +170,8 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                 <div className="space-y-4">
                     <div>
                         <label className="block text-xs text-slate-400 mb-1">Select Coin</label>
-                        <select 
-                            value={selectedCoin} 
+                        <select
+                            value={selectedCoin}
                             onChange={e => setSelectedCoin(e.target.value)}
                             className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white appearance-none focus:outline-none focus:border-sky-500"
                         >
@@ -179,12 +182,12 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                             ))}
                         </select>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Amount</label>
-                            <input 
-                                type="number" 
+                            <input
+                                type="number"
                                 placeholder="0.00"
                                 value={amountInput}
                                 onChange={e => setAmountInput(e.target.value)}
@@ -193,8 +196,8 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                         </div>
                         <div>
                             <label className="block text-xs text-slate-400 mb-1">Buy Price ($)</label>
-                            <input 
-                                type="number" 
+                            <input
+                                type="number"
                                 placeholder="Avg Price"
                                 value={priceInput}
                                 onChange={e => setPriceInput(e.target.value)}
@@ -203,8 +206,8 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                         </div>
                     </div>
 
-                    <button 
-                        onClick={addHolding}
+                    <button
+                        onClick={handleAddHolding}
                         className="w-full py-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-lg transition"
                     >
                         Save Transaction
@@ -228,14 +231,14 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/30">
-                        {portfolio.holdings.length === 0 ? (
+                        {holdings.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="px-6 py-8 text-center text-slate-500 italic">
                                     No assets found. Start adding your crypto!
                                 </td>
                             </tr>
                         ) : (
-                            portfolio.holdings.map(holding => {
+                            holdings.map(holding => {
                                 const coin = marketData.find(c => c.id === holding.id);
                                 if (!coin) return null; // Or skeleton
 
@@ -281,8 +284,8 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button 
-                                                onClick={() => removeHolding(holding.id)}
+                                            <button
+                                                onClick={() => handleRemoveHolding(holding.id)}
                                                 className="text-slate-500 hover:text-rose-500 transition"
                                                 title="Remove"
                                             >
@@ -296,6 +299,7 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                     </tbody>
                 </table>
             </div>
+
         </div>
       </div>
     </section>
