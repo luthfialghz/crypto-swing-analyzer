@@ -5,6 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+        - GEMINI_API_KEY=${GEMINI_API_KEY}
+        - NEXT_PUBLIC_BASE_URL=http://localhost:3000
     ports:
       - "3000:3000"
     environment:
@@ -14,8 +18,9 @@ services:
     volumes:
       # Mount data directory for portfolio persistence
       - ./data:/app/data
-      # Mount .env file if it exists
-      - ./.env.local:/app/.env.local:ro
+      # Only mount .env.local if it exists, otherwise skip
+      # Comment out the .env.local mount to avoid conflicts during build
+      # - ./.env.local:/app/.env.local:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
@@ -23,6 +28,13 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    # Add resource limits to prevent build issues
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
 
 # Named volumes (currently unused, but available if needed)
 # volumes:
