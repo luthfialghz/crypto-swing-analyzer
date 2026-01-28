@@ -2,19 +2,30 @@
 FROM node:18-alpine
 
 # Install necessary runtime dependencies
-RUN apk add --no-cache libc6-compat curl
+RUN apk add --no-cache libc6-compat
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files to install dependencies
+# Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm install --production --verbose
+# Install all dependencies (including devDependencies for build)
+RUN npm install --verbose
 
-# Copy the pre-built application (this assumes you have run 'npm run build' locally first)
+# Copy the rest of the application code
 COPY . .
+
+# Set environment variables for the build
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV CI=false
+
+# Build the application
+RUN npm run build
+
+# Expose port
+EXPOSE 3000
 
 # Set environment variables for runtime
 ENV NODE_ENV=production
@@ -32,12 +43,5 @@ RUN chown -R nextjs:nodejs /app
 # Switch to non-root user
 USER nextjs
 
-# Expose port
-EXPOSE 3000
-
-# Health check for container orchestration
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/ || exit 1
-
 # Start the application
-CMD ["node", ".next/standalone/server.js"]
+CMD ["npm", "start"]
