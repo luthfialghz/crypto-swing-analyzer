@@ -215,12 +215,12 @@ export async function POST(request: NextRequest) {
       .join(', ');
 
     const prompt = `
-Seorang ahli trading swing crypto. ANALISIS UNTUK SWING TRADING (BUKAN SCALPING) dengan timeframe 4H-7D.
+Seorang ahli trading SPOT crypto. ANALISIS UNTUK SPOT SWING TRADING (BUKAN FUTURES/LEVERAGE) dengan timeframe 4H (4 Jam) & 1D (1 Hari).
 
 DATA PASAR:
 ${marketDataSummary}
 
-${portfolioContext ? `KONTEKS PORTOFOLIO: ${portfolioContext.substring(0, 300)}` : ''} // Sertakan konteks portofolio untuk ukuran posisi
+${portfolioContext ? `KONTEKS PORTOFOLIO: ${portfolioContext.substring(0, 300)}` : ''} // Sertakan konteks portofolio untuk ukuran posisi SPOT
 
 KOIN YANG TERSEDIA UNTUK INVESTASI ALTERNATIF: ${alternativeCoinsList || 'bitcoin, ethereum, solana, cardano, polkadot'} // Sarankan ini saat merekomendasikan penjualan
 
@@ -231,35 +231,37 @@ Berikan JSON:
       "coinId": "id",
       "coinName": "Nama",
       "symbol": "SIM",
-      "recommendation": "BELI/JUAL/TAHAN",
+      "recommendation": "BELI/JUAL/TAHAN", // JUAL berarti menjual aset yang dimiliki (Spot Sell), bukan Short Selling.
       "confidence": 0-100,
-      "positionSizePercent": 0-100, // Persentase dari saldo USDT untuk dialokasikan
+      "positionSizePercent": 0-100, // Persentase dari saldo USDT untuk dialokasikan (Spot Buy)
       "entryPrice": number,
-      "targetPrice": number,
-      "stopLoss": number,
-      "timeframe": "durasi swing (misalnya, 2-7 hari)",
-      "reasoning": "Rasio trading SWING dengan analisis tren",
+      "targetPrice": number, // Target harga untuk Take Profit (Spot)
+      "stopLoss": number, // Harga untuk Cut Loss (Spot)
+      "timeframe": "4 Jam - 1 Hari",
+      "reasoning": "Analisis teknikal berbasis timeframe 4H dan 1D",
       "riskLevel": "RENDAH/SEDANG/TINGGI",
       "keyLevels": {"support": [harga], "resistance": [harga]},
       "swingPlan": {
-        "strategy": "strategi swing spesifik",
-        "entry": "kapan dan bagaimana masuk",
-        "exit": "kapan dan bagaimana keluar",
-        "riskManagement": "kontrol risiko untuk trading swing"
+        "strategy": "strategi spot swing spesifik",
+        "entry": "area beli spot",
+        "exit": "target jual spot (TP)",
+        "riskManagement": "batas kerugian (CL)"
       }
     }
   ],
   "marketSentiment": "BULLISH/BEARISH/NETRAL",
-  "overallAdvice": "saran trading swing komprehensif dengan mempertimbangkan alokasi portofolio"
+  "overallAdvice": "saran trading spot swing komprehensif"
 }
 
 Aturan:
-- FOKUS PADA SWING TRADING (tahan posisi selama beberapa jam hingga hari, BUKAN menit)
+- FOKUS PADA SPOT TRADING (Beli Rendah, Jual Tinggi). JANGAN GUNAKAN ISTILAH LEVERAGE/MARGIN.
+- Analisis HANYA berdasarkan timeframe 4H (4 Jam) dan 1D (1 Hari).
+- "JUAL" hanya untuk menjual aset yang sudah dimiliki (Take Profit / Cut Loss).
 - Sertakan ukuran posisi berdasarkan konteks portofolio (jika disediakan)
 - Rekomendasikan KOIN ALTERNATIF dari daftar KOIN YANG TERSEDIA saat merekomendasikan PENJUALAN kepemilikan saat ini
 - Pertimbangkan rebalancing portofolio: jika merekomendasikan untuk JUAL, sarankan apa yang harus dibeli dengan hasil penjualan dari daftar koin yang tersedia
 - Target harga realistis berdasarkan level teknikal dan chart 4H/1D
-- Sertakan manajemen risiko dengan stop loss
+- Sertakan manajemen risiko dengan stop loss (Cut Loss)
 - Faktor diversifikasi portofolio
 - Kembalikan HANYA JSON VALID, tanpa teks lain
 - Jika konteks portofolio mencakup saldo USDT, rekomendasikan persentase alokasi spesifik
