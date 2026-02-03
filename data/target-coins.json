@@ -1,0 +1,37 @@
+[
+  {
+    "id": "chaingpt",
+    "name": "ChainGPT",
+    "symbol": "CGPT",
+    "enabled": true,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "bittensor",
+    "name": "Bittensor",
+    "symbol": "TAO",
+    "enabled": true,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "near",
+    "name": "NEAR Protocol",
+    "symbol": "NEAR",
+    "enabled": true,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "render-token",
+    "name": "Render Token",
+    "symbol": "RNDR",
+    "enabled": true,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "tether",
+    "name": "Tether",
+    "symbol": "USDT",
+    "enabled": true,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+]

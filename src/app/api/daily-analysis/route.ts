@@ -5,7 +5,7 @@ import { getTargetCoins } from '@/config/target-coins';
 export async function GET(request: NextRequest) {
   try {
     // Dapatkan target coins yang aktif
-    const targetCoins = getTargetCoins();
+    const targetCoins = await getTargetCoins();
     const ids = targetCoins.map(coin => coin.id).join(',');
 
     if (!ids) {
