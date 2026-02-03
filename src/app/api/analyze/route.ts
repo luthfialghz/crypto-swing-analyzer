@@ -215,58 +215,57 @@ export async function POST(request: NextRequest) {
       .join(', ');
 
     const prompt = `
-Seorang ahli trading SPOT crypto. ANALISIS UNTUK SPOT SWING TRADING (BUKAN FUTURES/LEVERAGE) dengan timeframe 4H (4 Jam) & 1D (1 Hari).
+Anda adalah ahli trading SPOT crypto profesional. Lakukan ANALISIS UNTUK SPOT SWING TRADING (BUKAN FUTURES/LEVERAGE).
 
-DATA PASAR:
+PENTING: Analisis HANYA berdasarkan timeframe 4H (4 Jam) dan 1D (1 Hari) dari grafik CoinGecko yang tersedia.
+
+DATA PASAR DARI COINGECKO:
 ${marketDataSummary}
 
-${portfolioContext ? `KONTEKS PORTOFOLIO: ${portfolioContext.substring(0, 300)}` : ''} // Sertakan konteks portofolio untuk ukuran posisi SPOT
+${portfolioContext ? `KONTEKS PORTOFOLIO: ${portfolioContext.substring(0, 300)}` : ''}
 
-KOIN YANG TERSEDIA UNTUK INVESTASI ALTERNATIF: ${alternativeCoinsList || 'bitcoin, ethereum, solana, cardano, polkadot'} // Sarankan ini saat merekomendasikan penjualan
+KOIN YANG TERSEDIA UNTUK INVESTASI ALTERNATIF: ${alternativeCoinsList || 'bitcoin, ethereum, solana, cardano, polkadot'}
 
-Berikan JSON:
+Berikan analisis dalam format JSON berikut:
 {
   "analysis": [
     {
       "coinId": "id",
       "coinName": "Nama",
       "symbol": "SIM",
-      "recommendation": "BELI/JUAL/TAHAN", // JUAL berarti menjual aset yang dimiliki (Spot Sell), bukan Short Selling.
+      "recommendation": "BELI/JUAL/TAHAN",
       "confidence": 0-100,
-      "positionSizePercent": 0-100, // Persentase dari saldo USDT untuk dialokasikan (Spot Buy)
+      "positionSizePercent": 0-100,
       "entryPrice": number,
-      "targetPrice": number, // Target harga untuk Take Profit (Spot)
-      "stopLoss": number, // Harga untuk Cut Loss (Spot)
-      "timeframe": "4 Jam - 1 Hari",
-      "reasoning": "Analisis teknikal berbasis timeframe 4H dan 1D",
+      "targetPrice": number,
+      "stopLoss": number,
+      "timeframe": "4H - 1D",
+      "reasoning": "Analisis teknikal HANYA berdasarkan grafik 4H dan 1D dari CoinGecko",
       "riskLevel": "RENDAH/SEDANG/TINGGI",
       "keyLevels": {"support": [harga], "resistance": [harga]},
       "swingPlan": {
-        "strategy": "strategi spot swing spesifik",
-        "entry": "area beli spot",
-        "exit": "target jual spot (TP)",
-        "riskManagement": "batas kerugian (CL)"
+        "strategy": "strategi spot swing berdasarkan timeframe 4H dan 1D",
+        "entry": "area entry berdasarkan chart 4H/1D",
+        "exit": "target exit berdasarkan chart 4H/1D",
+        "riskManagement": "stop loss berdasarkan support/resistance 4H/1D"
       }
     }
   ],
   "marketSentiment": "BULLISH/BEARISH/NETRAL",
-  "overallAdvice": "saran trading spot swing komprehensif"
+  "overallAdvice": "saran trading spot swing berdasarkan analisis 4H dan 1D"
 }
 
-Aturan:
-- FOKUS PADA SPOT TRADING (Beli Rendah, Jual Tinggi). JANGAN GUNAKAN ISTILAH LEVERAGE/MARGIN.
-- Analisis HANYA berdasarkan timeframe 4H (4 Jam) dan 1D (1 Hari).
-- "JUAL" hanya untuk menjual aset yang sudah dimiliki (Take Profit / Cut Loss).
-- Sertakan ukuran posisi berdasarkan konteks portofolio (jika disediakan)
-- Rekomendasikan KOIN ALTERNATIF dari daftar KOIN YANG TERSEDIA saat merekomendasikan PENJUALAN kepemilikan saat ini
-- Pertimbangkan rebalancing portofolio: jika merekomendasikan untuk JUAL, sarankan apa yang harus dibeli dengan hasil penjualan dari daftar koin yang tersedia
-- Target harga realistis berdasarkan level teknikal dan chart 4H/1D
-- Sertakan manajemen risiko dengan stop loss (Cut Loss)
-- Faktor diversifikasi portofolio
-- Kembalikan HANYA JSON VALID, tanpa teks lain
-- Jika konteks portofolio mencakup saldo USDT, rekomendasikan persentase alokasi spesifik
-- Untuk situasi CUT LOSS, rekomendasikan investasi alternatif dari daftar koin yang tersedia
-- Untuk rekomendasi BELI, pertimbangkan koin mana yang mungkin dikurangi posisinya untuk membiayai pembelian
+ATURAN KETAT:
+1. HANYA gunakan data dari timeframe 4H (4 Jam) dan 1D (1 Hari) - JANGAN analisis timeframe lain
+2. Semua level support, resistance, entry, dan exit HARUS berdasarkan grafik 4H dan 1D dari CoinGecko
+3. SPOT TRADING saja - TIDAK ADA leverage, margin, atau short selling
+4. "JUAL" = menjual aset yang sudah dimiliki (Take Profit/Cut Loss), BUKAN short
+5. "BELI" = membeli dengan USDT yang tersedia
+6. Gunakan data H4 (4H change) dan D1 (24h change) yang disediakan untuk analisis
+7. Rekomendasikan koin alternatif dari daftar yang tersedia saat menyarankan JUAL
+8. Target dan stop loss HARUS realistis berdasarkan volatilitas 4H dan 1D
+9. Kembalikan HANYA JSON VALID tanpa teks tambahan
+10. Pertimbangkan diversifikasi dan rebalancing portofolio
 `;
 
     // Use gemini-2.5-flash for better free tier availability

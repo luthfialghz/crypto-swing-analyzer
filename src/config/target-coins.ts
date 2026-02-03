@@ -1,5 +1,6 @@
-// Configuration for target coins
-// This serves as the interface for the API endpoint that manages target coins
+// Configuration for target coins with persistent JSON database
+import fs from 'fs/promises';
+import path from 'path';
 
 export interface TargetCoin {
   id: string; // CoinGecko ID
@@ -9,7 +10,9 @@ export interface TargetCoin {
   createdAt: string; // ISO string format
 }
 
-// Default target coins - these can be modified dynamically
+const DB_PATH = path.join(process.cwd(), 'data', 'target-coins.json');
+
+// Default target coins - used for initialization only
 const DEFAULT_TARGET_COINS: TargetCoin[] = [
   {
     id: 'chaingpt',
@@ -48,32 +51,65 @@ const DEFAULT_TARGET_COINS: TargetCoin[] = [
   },
 ];
 
-// In-memory storage for target coins (will be replaced with database in production)
-let targetCoins: TargetCoin[] = [...DEFAULT_TARGET_COINS];
+/**
+ * Read target coins from database file
+ */
+async function readDatabase(): Promise<TargetCoin[]> {
+  try {
+    const data = await fs.readFile(DB_PATH, 'utf-8');
+    return JSON.parse(data);
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      console.log('[Target Coins] Database file not found. Creating with default coins...');
+      await writeDatabase(DEFAULT_TARGET_COINS);
+      return DEFAULT_TARGET_COINS;
+    }
+    console.error('[Target Coins] Error reading database:', error);
+    return DEFAULT_TARGET_COINS;
+  }
+}
+
+/**
+ * Write target coins to database file
+ */
+async function writeDatabase(coins: TargetCoin[]): Promise<void> {
+  try {
+    const dir = path.dirname(DB_PATH);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(DB_PATH, JSON.stringify(coins, null, 2), 'utf-8');
+    console.log('[Target Coins] Database saved successfully');
+  } catch (error) {
+    console.error('[Target Coins] Error writing database:', error);
+    throw error;
+  }
+}
 
 /**
  * Get all active target coins
  */
-export const getTargetCoins = (): TargetCoin[] => {
-  return targetCoins.filter(coin => coin.enabled);
+export const getTargetCoins = async (): Promise<TargetCoin[]> => {
+  const coins = await readDatabase();
+  return coins.filter(coin => coin.enabled);
 };
 
 /**
  * Get all target coins (including disabled ones)
  */
-export const getAllTargetCoins = (): TargetCoin[] => {
-  return [...targetCoins];
+export const getAllTargetCoins = async (): Promise<TargetCoin[]> => {
+  return await readDatabase();
 };
 
 /**
  * Add a new target coin
  */
-export const addTargetCoin = (coin: Omit<TargetCoin, 'createdAt' | 'enabled'>): TargetCoin => {
-  const existingCoin = targetCoins.find(c => c.id === coin.id);
+export const addTargetCoin = async (coin: Omit<TargetCoin, 'createdAt' | 'enabled'>): Promise<TargetCoin> => {
+  const coins = await readDatabase();
+  const existingCoin = coins.find(c => c.id === coin.id);
 
   if (existingCoin) {
     // If coin already exists, just enable it
     existingCoin.enabled = true;
+    await writeDatabase(coins);
     return existingCoin;
   }
 
@@ -83,17 +119,21 @@ export const addTargetCoin = (coin: Omit<TargetCoin, 'createdAt' | 'enabled'>): 
     createdAt: new Date().toISOString(),
   };
 
-  targetCoins.push(newCoin);
+  coins.push(newCoin);
+  await writeDatabase(coins);
   return newCoin;
 };
 
 /**
  * Remove a target coin (disable it)
  */
-export const removeTargetCoin = (id: string): boolean => {
-  const index = targetCoins.findIndex(coin => coin.id === id);
+export const removeTargetCoin = async (id: string): Promise<boolean> => {
+  const coins = await readDatabase();
+  const index = coins.findIndex(coin => coin.id === id);
+  
   if (index !== -1) {
-    targetCoins[index].enabled = false;
+    coins[index].enabled = false;
+    await writeDatabase(coins);
     return true;
   }
   return false;
@@ -102,10 +142,13 @@ export const removeTargetCoin = (id: string): boolean => {
 /**
  * Toggle a coin's enabled status
  */
-export const toggleTargetCoin = (id: string): boolean => {
-  const coin = targetCoins.find(coin => coin.id === id);
+export const toggleTargetCoin = async (id: string): Promise<boolean> => {
+  const coins = await readDatabase();
+  const coin = coins.find(coin => coin.id === id);
+  
   if (coin) {
     coin.enabled = !coin.enabled;
+    await writeDatabase(coins);
     return coin.enabled;
   }
   return false;
@@ -114,13 +157,14 @@ export const toggleTargetCoin = (id: string): boolean => {
 /**
  * Find a target coin by ID
  */
-export const findTargetCoin = (id: string): TargetCoin | undefined => {
-  return targetCoins.find(coin => coin.id === id);
+export const findTargetCoin = async (id: string): Promise<TargetCoin | undefined> => {
+  const coins = await readDatabase();
+  return coins.find(coin => coin.id === id);
 };
 
 /**
  * Initialize target coins from API data (for when API is implemented)
  */
-export const initializeTargetCoins = (coins: TargetCoin[]) => {
-  targetCoins = coins;
+export const initializeTargetCoins = async (coins: TargetCoin[]): Promise<void> => {
+  await writeDatabase(coins);
 };
