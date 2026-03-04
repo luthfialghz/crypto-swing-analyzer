@@ -262,8 +262,8 @@ export default function Home() {
                         <Settings size={24} className="text-violet-400" />
                       </div>
                       <div>
-                        <h3 className="text-white font-bold tracking-tight">Configurations</h3>
-                        <p className="text-xs text-text-secondary">Manage koin target & logs</p>
+                        <h3 className="text-white font-bold tracking-tight">Diagnostics</h3>
+                        <p className="text-xs text-text-secondary">System testing & logs</p>
                       </div>
                     </div>
                     <Send size={18} className="text-text-secondary group-hover:text-white transition-all transform group-hover:translate-x-1" />
