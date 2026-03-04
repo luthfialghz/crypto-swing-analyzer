@@ -1,104 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  addTargetCoin,
-  removeTargetCoin,
-  toggleTargetCoin,
-  getAllTargetCoins,
-  findTargetCoin,
-  TargetCoin,
-  initializeTargetCoins
-} from '@/config/target-coins';
+import fs from 'fs/promises';
+import path from 'path';
 
-export async function GET(request: NextRequest) {
+const PORTFOLIO_PATH = path.join(process.cwd(), 'data', 'portfolio.json');
+
+// Metadata map: CoinGecko ID → display name & symbol
+const COIN_METADATA: Record<string, { name: string; symbol: string }> = {
+  'bitcoin': { name: 'Bitcoin', symbol: 'BTC' },
+  'ethereum': { name: 'Ethereum', symbol: 'ETH' },
+  'solana': { name: 'Solana', symbol: 'SOL' },
+  'bittensor': { name: 'Bittensor', symbol: 'TAO' },
+  'chaingpt': { name: 'ChainGPT', symbol: 'CGPT' },
+  'near': { name: 'NEAR Protocol', symbol: 'NEAR' },
+  'render-token': { name: 'Render Token', symbol: 'RNDR' },
+  'tether': { name: 'Tether', symbol: 'USDT' },
+  'binancecoin': { name: 'BNB', symbol: 'BNB' },
+  'ripple': { name: 'XRP', symbol: 'XRP' },
+  'cardano': { name: 'Cardano', symbol: 'ADA' },
+  'dogecoin': { name: 'Dogecoin', symbol: 'DOGE' },
+  'litecoin': { name: 'Litecoin', symbol: 'LTC' },
+  'chainlink': { name: 'Chainlink', symbol: 'LINK' },
+  'polkadot': { name: 'Polkadot', symbol: 'DOT' },
+  'avalanche-2': { name: 'Avalanche', symbol: 'AVAX' },
+  'matic-network': { name: 'Polygon', symbol: 'MATIC' },
+};
+
+async function getPortfolioHoldings() {
   try {
-    const coins = await getAllTargetCoins();
-    return NextResponse.json(coins);
-  } catch (error) {
-    console.error('Error fetching target coins:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch target coins' },
-      { status: 500 }
-    );
+    const data = await fs.readFile(PORTFOLIO_PATH, 'utf-8');
+    const portfolio = JSON.parse(data);
+    return portfolio.holdings || [];
+  } catch {
+    return [];
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const { id, name, symbol } = await request.json();
+    const holdings = await getPortfolioHoldings();
 
-    if (!id || !name || !symbol) {
-      return NextResponse.json(
-        { error: 'Missing required fields: id, name, symbol' },
-        { status: 400 }
-      );
-    }
+    const targetCoins = holdings.map((h: { id: string; amount: number; avgBuyPrice: number }) => {
+      const meta = COIN_METADATA[h.id] ?? { name: h.id, symbol: h.id.toUpperCase() };
+      return {
+        id: h.id,
+        name: meta.name,
+        symbol: meta.symbol,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+      };
+    });
 
-    const newCoin = await addTargetCoin({ id, name, symbol });
-    return NextResponse.json(newCoin);
+    return NextResponse.json(targetCoins);
   } catch (error) {
-    console.error('Error adding target coin:', error);
-    return NextResponse.json(
-      { error: 'Failed to add target coin' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const { id } = await request.json();
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Missing coin id' },
-        { status: 400 }
-      );
-    }
-
-    const coin = await findTargetCoin(id);
-    if (!coin) {
-      return NextResponse.json(
-        { error: 'Coin not found' },
-        { status: 404 }
-      );
-    }
-
-    const isEnabled = await toggleTargetCoin(id);
-    return NextResponse.json({ ...coin, enabled: isEnabled });
-  } catch (error) {
-    console.error('Error toggling target coin:', error);
-    return NextResponse.json(
-      { error: 'Failed to toggle target coin' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request: NextRequest) {
-  try {
-    const { id } = await request.json();
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Missing coin id' },
-        { status: 400 }
-      );
-    }
-
-    const success = await removeTargetCoin(id);
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Coin not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error removing target coin:', error);
-    return NextResponse.json(
-      { error: 'Failed to remove target coin' },
-      { status: 500 }
-    );
+    console.error('Error deriving target coins from portfolio:', error);
+    return NextResponse.json({ error: 'Failed to fetch target coins' }, { status: 500 });
   }
 }
