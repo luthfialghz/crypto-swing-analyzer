@@ -27,6 +27,8 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [analysisTimestamp, setAnalysisTimestamp] = useState<Date | null>(null);
+  const [isCached, setIsCached] = useState(false);
 
   const fetchAnalysis = async () => {
     if (marketData.length === 0) {
@@ -37,6 +39,7 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
     setIsLoading(true);
     setError(null);
 
+    const startTime = Date.now();
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -48,8 +51,11 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
         throw new Error('Failed to get AI analysis');
       }
 
+      const elapsed = Date.now() - startTime;
       const data: AIAnalysisResult = await res.json();
       setAnalysis(data);
+      setAnalysisTimestamp(new Date());
+      setIsCached(elapsed < 500);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -138,10 +144,21 @@ export const AIAnalysisSection = ({ marketData }: AIAnalysisSectionProps) => {
               <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-400 border border-violet-500/30">
                 Gemini Pro
               </span>
+              {isCached && (
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Cached
+                </span>
+              )}
             </div>
-            <p className="text-text-secondary text-sm">
-              Quantum-powered market insights & strategies
-            </p>
+            {analysisTimestamp ? (
+              <p className="text-text-secondary text-sm">
+                Generated at {analysisTimestamp.toLocaleTimeString()}
+              </p>
+            ) : (
+              <p className="text-text-secondary text-sm">
+                Quantum-powered market insights & strategies
+              </p>
+            )}
           </div>
         </div>
 

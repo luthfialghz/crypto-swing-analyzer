@@ -1,53 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ProcessedCoinData } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, Plus, Trash2, Save } from 'lucide-react';
+import { Wallet, Plus, Save } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
-import { CryptoCard } from './CryptoCard'; // Import CryptoCard
-
-interface Holding {
-  id: string;
-  amount: number;
-  avgBuyPrice: number;
-}
+import { CryptoCard } from './CryptoCard';
 
 interface PortfolioSectionProps {
   marketData: ProcessedCoinData[];
-  idrRate: number; // Keep idrRate as prop if it's used elsewhere
+  idrRate: number;
 }
 
 export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps) => {
   const { usdtBalance, holdings, updateBalance, addHolding, removeHolding } = usePortfolio();
-  const [loading, setLoading] = useState(true);
   const [isEditingBalance, setIsEditingBalance] = useState(false);
-  const [tempBalance, setTempBalance] = useState('0');
+  const [tempBalance, setTempBalance] = useState(usdtBalance.toString());
 
   // Form State
   const [selectedCoin, setSelectedCoin] = useState(marketData[0]?.id || 'bitcoin');
   const [amountInput, setAmountInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
-
-  // Fetch initial data - This part might be redundant if page.tsx already fetches it.
-  // I will leave it for now to avoid breaking existing functionality, but it could be optimized.
-  useEffect(() => {
-    const fetchPortfolio = async () => {
-      try {
-        const res = await fetch('/api/portfolio');
-        if (res.ok) {
-          const data = await res.json();
-          setTempBalance(data.usdtBalance.toString());
-        }
-      } catch (error) {
-        console.error("Failed to fetch portfolio", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPortfolio();
-  }, []);
 
   // Actions
   const handleUpdateBalance = async () => {
@@ -76,24 +49,18 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
     });
 
     if (res.ok) {
-        const newData = await res.json();
         addHolding({ id: selectedCoin, amount, avgBuyPrice: price });
         setAmountInput('');
         setPriceInput('');
     }
   };
 
-  // The Dribbble reference doesn't show a direct remove button for each asset in the list,
-  // but it's good to keep the functionality. I'll include a hidden one or make it accessible
-  // through an edit mode if we were to implement that. For now, I'll remove the trash icon
-  // from the list item directly, but the function still exists.
   const handleRemoveHolding = async (id: string) => {
       const res = await fetch('/api/portfolio', {
         method: 'POST',
         body: JSON.stringify({ action: 'remove_holding', id }),
       });
       if (res.ok) {
-          const newData = await res.json();
           removeHolding(id);
       }
   };
@@ -127,7 +94,11 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
             if (!coin) return null;
 
             return (
-              <CryptoCard key={coin.id} coin={coin} />
+              <CryptoCard
+                key={coin.id}
+                coin={coin}
+                holding={{ amount: holding.amount, avgBuyPrice: holding.avgBuyPrice }}
+              />
             );
           })
         )}
@@ -152,7 +123,7 @@ export const PortfolioSection = ({ marketData, idrRate }: PortfolioSectionProps)
                     {isEditingBalance ? (
                           <button onClick={handleUpdateBalance} className="p-2 bg-accent-green/20 text-accent-green rounded-xl hover:bg-accent-green/30 transition-all active:scale-90"><Save size={18}/></button>
                     ) : (
-                          <button onClick={() => setIsEditingBalance(true)} className="text-xs font-black uppercase tracking-widest text-accent-blue hover:text-white transition-colors">Adjust</button>
+                          <button onClick={() => { setTempBalance(usdtBalance.toString()); setIsEditingBalance(true); }} className="text-xs font-black uppercase tracking-widest text-accent-blue hover:text-white transition-colors">Adjust</button>
                     )}
                 </div>
                 {isEditingBalance ? (
