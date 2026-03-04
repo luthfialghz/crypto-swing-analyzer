@@ -14,24 +14,17 @@
     "createdAt": "2024-01-01T00:00:00.000Z"
   },
   {
-    "id": "near",
-    "name": "NEAR Protocol",
-    "symbol": "NEAR",
+    "id": "solana",
+    "name": "Solana",
+    "symbol": "SOL",
     "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z"
+    "createdAt": "2026-01-26T13:00:58.000Z"
   },
   {
-    "id": "render-token",
-    "name": "Render Token",
-    "symbol": "RNDR",
+    "id": "bitcoin",
+    "name": "Bitcoin",
+    "symbol": "BTC",
     "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  },
-  {
-    "id": "tether",
-    "name": "Tether",
-    "symbol": "USDT",
-    "enabled": true,
-    "createdAt": "2024-01-01T00:00:00.000Z"
+    "createdAt": "2026-02-02T04:40:08.000Z"
   }
 ]

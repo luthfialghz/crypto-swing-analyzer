@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CoinData, ProcessedCoinData } from '@/types';
-import { getTargetCoins } from '@/config/target-coins';
 
 export const useCryptoData = () => {
   const [data, setData] = useState<ProcessedCoinData[]>([]);
   const [status, setStatus] = useState<'ONLINE' | 'OFFLINE' | 'IDLE'>('IDLE');
   const [lastUpdated, setLastUpdated] = useState<string>('-');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [idrRate, setIdrRate] = useState(16200); // Default fallback
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setIsRefreshing(true);
+  const fetchData = useCallback(async (isInitial = false) => {
+    if (isInitial) {
+      setIsLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     try {
       // Fetch target coins from API
       const targetCoinsRes = await fetch('/api/target-coins');
@@ -24,7 +27,6 @@ export const useCryptoData = () => {
       const ids = activeCoins.map((coin: any) => coin.id).join(',');
 
       if (!ids) {
-        // If no target coins are configured, use an empty array
         setData([]);
         setStatus('ONLINE');
         setLastUpdated(new Date().toLocaleTimeString());
@@ -35,11 +37,10 @@ export const useCryptoData = () => {
       const marketsParams = `vs_currency=usd&ids=${ids}&order=market_cap_desc&sparkline=true&price_change_percentage=24h`;
       const priceParams = `ids=tether&vs_currencies=idr`;
 
-      // Parallel Fetch ke Local Proxy (Separate try-catch logic)
+      // Parallel Fetch ke Local Proxy
       const fetchCoins = fetch(`/api/proxy?endpoint=coins/markets&params=${encodeURIComponent(marketsParams)}`);
       const fetchRate = fetch(`/api/proxy?endpoint=simple/price&params=${encodeURIComponent(priceParams)}`);
 
-      // Kita tunggu data coins (Wajib), rate IDR (Opsional)
       const [coinsRes, rateRes] = await Promise.all([fetchCoins, fetchRate]);
 
       if (!coinsRes.ok) throw new Error('API Error loading coins');
@@ -89,9 +90,16 @@ export const useCryptoData = () => {
     }
   }, []);
 
+  // Auto-fetch on mount and auto-refresh every 60 seconds
+  useEffect(() => {
+    fetchData(true);
+    const interval = setInterval(() => fetchData(false), 60_000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
   // Manual refresh function - called by user action
   const refresh = useCallback(() => {
-    fetchData();
+    fetchData(false);
   }, [fetchData]);
 
   return { data, status, lastUpdated, isLoading, idrRate, isRefreshing, refresh };

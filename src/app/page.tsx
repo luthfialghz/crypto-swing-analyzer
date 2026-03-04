@@ -1,18 +1,32 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useCryptoData } from '@/hooks/useCryptoData';
 import { PortfolioSection } from '@/components/PortfolioSection';
 import { AIAnalysisSection } from '@/components/AIAnalysisSection';
 import { TestNotificationButton } from '@/components/TestNotificationButton';
 import { SendAIAnalysisButton } from '@/components/SendAIAnalysisButton';
 import { TestFullProcessButton } from '@/components/TestFullProcessButton';
-import { Share2, Activity, Wifi, WifiOff, RefreshCw, Clock, Send, Bot, Zap, Wallet, Brain } from 'lucide-react';
+import { Settings, Activity, Wifi, WifiOff, RefreshCw, Clock, Send, Bot, Zap, Wallet, Brain } from 'lucide-react';
 import { usePortfolio } from '@/contexts/PortfolioContext';
 import { PortfolioBalanceCard } from '@/components/PortfolioBalanceCard';
 
 export default function Home() {
   const { data, status, lastUpdated, isLoading, idrRate, isRefreshing, refresh } = useCryptoData();
-  const { usdtBalance, holdings } = usePortfolio(); // Use portfolio context
+  const { usdtBalance, holdings } = usePortfolio();
+  const [nextRefreshIn, setNextRefreshIn] = useState(60);
+
+  // Countdown timer for auto-refresh
+  useEffect(() => {
+    setNextRefreshIn(60);
+    const countdown = setInterval(() => {
+      setNextRefreshIn(prev => {
+        if (prev <= 1) return 60;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countdown);
+  }, [lastUpdated]);
 
   // Calculate total portfolio value
   const calculateTotalPortfolioValue = () => {
@@ -28,15 +42,26 @@ export default function Home() {
 
   const totalPortfolioValue = calculateTotalPortfolioValue();
 
+  // Real portfolio stats
+  const totalInvested = holdings.reduce((sum, h) => sum + h.amount * h.avgBuyPrice, 0);
+  const currentHoldingsValue = holdings.reduce((sum, h) => {
+    const coin = data.find(c => c.id === h.id);
+    return sum + (coin ? h.amount * coin.current_price : 0);
+  }, 0);
+  const profitPercent = totalInvested > 0
+    ? ((currentHoldingsValue - totalInvested) / totalInvested) * 100
+    : 0;
+  const riskScore = holdings.length === 1 ? 'Tinggi' : holdings.length <= 3 ? 'Sedang' : 'Rendah';
+
   // Aggregate sparkline data for portfolio chart
   const portfolioChartData = (() => {
     if (data.length === 0 || holdings.length === 0) {
-      return Array(30).fill(0); // Default to 30 zeros if no data or holdings
+      return Array(30).fill(0);
     }
 
     const firstCoinWithSparkline = data.find(coin => coin.sparkline_in_7d?.price?.length > 0);
     if (!firstCoinWithSparkline) {
-      return Array(30).fill(0); // If no coin has sparkline data
+      return Array(30).fill(0);
     }
 
     const sparklineLength = firstCoinWithSparkline.sparkline_in_7d.price.length;
@@ -56,7 +81,7 @@ export default function Home() {
     return aggregatedValues.map(value => value + usdtBalance);
   })();
 
-  const mainChartColor = totalPortfolioValue >= (portfolioChartData[0] || 0) ? 'rgb(52, 211, 153)' : 'rgb(239, 68, 68)'; // accent-green : accent-red
+  const mainChartColor = totalPortfolioValue >= (portfolioChartData[0] || 0) ? 'rgb(52, 211, 153)' : 'rgb(239, 68, 68)';
 
   const getStatusBadge = () => {
     switch (status) {
@@ -86,7 +111,7 @@ export default function Home() {
 
   return (
       <div className="flex min-h-screen">
-        {/* Sidebar Nav (Simulated for Premium Feel) */}
+        {/* Sidebar Nav */}
         <aside className="hidden lg:flex flex-col w-20 xl:w-64 glass border-r border-white/5 py-8 px-4 fixed h-full z-50">
           <div className="flex items-center gap-3 px-2 mb-12">
             <div className="w-10 h-10 rounded-xl bg-accent-green flex items-center justify-center shadow-lg shadow-accent-green/20">
@@ -100,7 +125,7 @@ export default function Home() {
               { icon: Activity, label: 'Dashboard', active: true },
               { icon: Wallet, label: 'Portfolio', active: false },
               { icon: Brain, label: 'AI Strategy', active: false },
-              { icon: Share2, label: 'Markets', active: false },
+              { icon: Bot, label: 'Markets', active: false },
               { icon: Send, label: 'Alerts', active: false },
             ].map((item, i) => (
               <a
@@ -118,7 +143,7 @@ export default function Home() {
 
           <div className="mt-auto pt-8 border-t border-white/5">
             <a href="/settings" className="flex items-center gap-4 px-3 py-3 rounded-2xl text-text-secondary hover:bg-white/5 hover:text-white transition-all">
-               <Share2 size={22} />
+               <Settings size={22} />
                <span className="hidden xl:block font-medium text-sm">Settings</span>
             </a>
           </div>
@@ -137,7 +162,10 @@ export default function Home() {
               </div>
               <p className="text-text-secondary font-medium flex items-center gap-2">
                 <Clock size={16} className="text-accent-blue" />
-                Last updated: {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Never'}
+                Last updated: {lastUpdated}
+                {status === 'ONLINE' && (
+                  <span className="text-xs text-text-secondary/60 ml-2">· Refresh in {nextRefreshIn}s</span>
+                )}
               </p>
             </div>
 
@@ -157,7 +185,7 @@ export default function Home() {
             </div>
           </header>
 
-          {isRefreshing && data.length === 0 ? (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center py-32 animate-fade-in">
               <div className="relative">
                 <div className="w-20 h-20 border-4 border-accent-blue/20 rounded-full"></div>
@@ -192,6 +220,10 @@ export default function Home() {
                     totalBalanceUSD={totalPortfolioValue}
                     chartData={portfolioChartData}
                     chartColor={mainChartColor}
+                    totalInvested={totalInvested}
+                    currentHoldingsValue={currentHoldingsValue}
+                    profitPercent={profitPercent}
+                    riskScore={riskScore}
                   />
                 </div>
 
@@ -227,7 +259,7 @@ export default function Home() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-violet-500/10 rounded-2xl border border-violet-500/20 group-hover:bg-violet-500/20 transition-all">
-                        <Share2 size={24} className="text-violet-400" />
+                        <Settings size={24} className="text-violet-400" />
                       </div>
                       <div>
                         <h3 className="text-white font-bold tracking-tight">Configurations</h3>
@@ -239,7 +271,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Middle Section: Full Width AI Analysis (for max space as requested) */}
+              {/* Middle Section: Full Width AI Analysis */}
               <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
                 <AIAnalysisSection marketData={data} />
               </div>
@@ -264,4 +296,3 @@ export default function Home() {
       </div>
   );
 }
-

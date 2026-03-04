@@ -1,30 +1,25 @@
 {
-  "usdtBalance": 209.11288761,
+  "usdtBalance": 0.11459896,
   "holdings": [
     {
+      "id": "solana",
+      "amount": 0.04024691,
+      "avgBuyPrice": 124.2331
+    },
+    {
       "id": "chaingpt",
-      "amount": 1000,
-      "avgBuyPrice": 0.0312621
+      "amount": 999,
+      "avgBuyPrice": 0.036246
     },
     {
       "id": "bittensor",
-      "amount": 0.12158,
-      "avgBuyPrice": 238.3
+      "amount": 0.1256742,
+      "avgBuyPrice": 238.5385
     },
     {
-      "id": "near",
-      "amount": 19.7,
-      "avgBuyPrice": 1.521
-    },
-    {
-      "id": "render",
-      "amount": 14.66,
-      "avgBuyPrice": 2.046
-    },
-    {
-      "id": "render-token",
-      "amount": 14.66,
-      "avgBuyPrice": 2.046
+      "id": "bitcoin",
+      "amount": 0.00272727,
+      "avgBuyPrice": 72399.95
     }
   ]
 }

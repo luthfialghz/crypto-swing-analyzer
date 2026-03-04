@@ -2,20 +2,34 @@
 
 import { formatCurrency } from '@/lib/utils';
 import { CryptoChart } from './CryptoChart';
-import { Wallet, ArrowDownCircle, ArrowUpCircle, Repeat2, Send } from 'lucide-react'; // Placeholder icons
+import { Wallet, ArrowDownCircle, ArrowUpCircle, TrendingUp, Shield } from 'lucide-react';
 
 interface PortfolioBalanceCardProps {
   totalBalanceUSD: number;
-  chartData: number[]; // Sparkline data for the main chart
+  chartData: number[];
   chartColor: string;
+  totalInvested: number;
+  currentHoldingsValue: number;
+  profitPercent: number;
+  riskScore: string;
 }
 
-export const PortfolioBalanceCard = ({ totalBalanceUSD, chartData, chartColor }: PortfolioBalanceCardProps) => {
+export const PortfolioBalanceCard = ({
+  totalBalanceUSD,
+  chartData,
+  chartColor,
+  totalInvested,
+  currentHoldingsValue,
+  profitPercent,
+  riskScore,
+}: PortfolioBalanceCardProps) => {
+  const isProfitable = profitPercent >= 0;
+
   return (
     <div className="glass rounded-[2rem] p-8 mb-8 animate-fade-in shadow-2xl overflow-hidden relative group">
       {/* Decorative Gradient Orb */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-accent-green/10 rounded-full blur-3xl pointer-events-none group-hover:bg-accent-green/20 transition-all duration-700"></div>
-      
+
       <div className="relative z-10">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10">
           <div className="flex items-center gap-4">
@@ -29,7 +43,7 @@ export const PortfolioBalanceCard = ({ totalBalanceUSD, chartData, chartColor }:
               </p>
             </div>
           </div>
-          
+
           <div className="flex gap-2 w-full md:w-auto">
              <button className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-accent-green text-dark-background font-bold text-sm hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-accent-green/20">
               <ArrowDownCircle size={18} />
@@ -45,10 +59,34 @@ export const PortfolioBalanceCard = ({ totalBalanceUSD, chartData, chartColor }:
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
-            { label: 'Spending', value: '$1,240', icon: Send, color: 'text-sky-400', bg: 'bg-sky-400/10' },
-            { label: 'Earning', value: '$4,820', icon: ArrowDownCircle, color: 'text-accent-green', bg: 'bg-accent-green/10' },
-            { label: 'Profit', value: '+12.5%', icon: Repeat2, color: 'text-accent-green', bg: 'bg-accent-green/10' },
-            { label: 'Risk Score', value: 'Low', icon: Wallet, color: 'text-indigo-400', bg: 'bg-indigo-400/10' }
+            {
+              label: 'Invested',
+              value: formatCurrency(totalInvested),
+              icon: Wallet,
+              color: 'text-sky-400',
+              bg: 'bg-sky-400/10'
+            },
+            {
+              label: 'Holdings',
+              value: formatCurrency(currentHoldingsValue),
+              icon: ArrowDownCircle,
+              color: 'text-accent-green',
+              bg: 'bg-accent-green/10'
+            },
+            {
+              label: 'P&L',
+              value: `${isProfitable ? '+' : ''}${profitPercent.toFixed(2)}%`,
+              icon: TrendingUp,
+              color: isProfitable ? 'text-accent-green' : 'text-accent-red',
+              bg: isProfitable ? 'bg-accent-green/10' : 'bg-accent-red/10'
+            },
+            {
+              label: 'Risk Score',
+              value: riskScore,
+              icon: Shield,
+              color: 'text-indigo-400',
+              bg: 'bg-indigo-400/10'
+            }
           ].map((stat, i) => (
             <div key={i} className="bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-white/10 transition-colors">
               <div className="flex items-center gap-2 mb-2">
@@ -57,7 +95,7 @@ export const PortfolioBalanceCard = ({ totalBalanceUSD, chartData, chartColor }:
                 </div>
                 <span className="text-xs text-text-secondary font-medium">{stat.label}</span>
               </div>
-              <p className="text-lg font-bold text-text-primary">{stat.value}</p>
+              <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
             </div>
           ))}
         </div>
